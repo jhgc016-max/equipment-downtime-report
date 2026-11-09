@@ -40,8 +40,23 @@ function convert(response) {
  if(data.pages.length!==data.pageCount || data.pages.some((p,i)=>p.sourcePage!==i+1)) throw new ScanError('응답에 페이지가 누락되었거나 페이지 순서가 잘못되었습니다. PDF를 나누어 다시 처리하세요.');
  return {pages:data.pages.map(p=>{ const out=Scan.normalizePage(p); out.raw=p.raw; out.sourcePage=p.sourcePage; out.reviews=p.reviews; return out; })};
 }
-function upstreamError(status) {
+function apiKey(value) {
+ const key=String(value || '').trim();
+ if (!/^sk-[A-Za-z0-9_-]{20,}$/.test(key)) throw new ScanError('API 키 전체를 입력하세요. sk-로 시작하는 비밀 키이며, 키 이름·Tracking ID·별표로 가려진 값은 사용할 수 없습니다. 키 앞뒤 따옴표와 중간 공백도 확인하세요.',400);
+ return key;
+}
+function upstreamError(status,payload) {
+ const code=payload && payload.error && payload.error.code;
+ const reasons={
+  invalid_api_key:'OpenAI가 입력한 키를 인증하지 못했습니다. 새 키 생성 직후 표시되는 sk-로 시작하는 비밀 키 전체를 복사하세요. API keys 목록의 이름·Tracking ID·가려진 값은 비밀 키가 아닙니다.',
+  insufficient_quota:'API 사용 잔액 또는 프로젝트 예산이 부족합니다. OpenAI API 결제·사용 한도를 확인하세요.',
+  model_not_found:'이 API 프로젝트에서 gpt-6.1-sol을 사용할 수 없습니다. 모델 접근 권한을 확인하세요.',
+  rate_limit_exceeded:'OpenAI 요청 한도를 초과했습니다. 잠시 후 다시 시도하세요.'
+ };
+ // Never display raw upstream messages: authentication errors may echo the key.
+ if(Object.prototype.hasOwnProperty.call(reasons,code)) return new ScanError('HTTP '+status+' · '+code+': '+reasons[code]);
+ if(status===401) return new ScanError('HTTP 401: OpenAI 인증에 실패했습니다. sk-로 시작하는 비밀 키 전체인지 확인하세요. 올바른 키라면 해당 조직의 API 접근 정책도 확인하세요.');
  return new ScanError(({400:'OpenAI 요청이 거절되었습니다. 문서 형식·용량과 모델 지원을 확인하세요.',401:'OpenAI API 키가 올바르지 않거나 폐기되었습니다.',403:'gpt-6.1-sol 접근 권한이 없습니다.',404:'gpt-6.1-sol 모델을 사용할 수 없습니다. 모델 권한을 확인하세요.',413:'OpenAI 입력 용량을 초과했습니다. 파일을 나누세요.',429:'OpenAI 호출 한도 또는 결제 한도를 초과했습니다. 잠시 후 다시 시도하세요.'})[status] || 'OpenAI 서비스 호출에 실패했습니다. 잠시 후 다시 시도하세요.',502);
 }
-return {schema,buildRequest,convert,validate,ScanError,upstreamError};
+return {schema,buildRequest,convert,validate,ScanError,upstreamError,apiKey};
 });

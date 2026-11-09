@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
-const {buildRequest,convert,schema,upstreamError}=require('../server/extraction.cjs');
+const {buildRequest,convert,schema,upstreamError,apiKey}=require('../server/extraction.cjs');
 const {createServer}=require('../server/server.cjs');
 const S=require('../public/js/scanread.js');
 function fixture(s) {
@@ -26,6 +26,7 @@ async function verify() {
  check('nullable row and provenance preserved',()=>{const o=convert(response(data)).pages[0];assert.equal(o.work.length,1);assert.equal(o.work[0].qty,'');assert.equal(o.raw.work.length,0);assert.equal(o.sourcePage,1);assert.equal(o.reviews[0].field,'work[1].start');assert.ok(S.validate(o).length);});
  check('incomplete/refusal/schema/missing pages rejected',()=>{assert.throws(()=>convert({status:'incomplete'}));assert.throws(()=>convert({status:'completed',output:[{type:'message',content:[{type:'refusal'}]}]}));assert.throws(()=>convert(response({pages:[]})));assert.throws(()=>convert(response({...data,pageCount:2})));assert.throws(()=>convert(response({...data,extra:0})));});
  check('business validation and legacy sample conversion',()=>{assert.equal(S.time('24:20'),null);assert.equal(S.minutes('99:99'),null);assert.equal(S.date('2026-02-30'),null);const sample=S.parseReply(S.sampleReply());assert.equal(sample.pages.length,2);assert.equal(sample.pages[1].downtime.length,2);assert.ok(S.toFormRows(sample.pages).length>2);assert.equal(S.toFormRows([S.blankPage('mach')])[1][9],'');});
+ check('safe authentication diagnostics',()=>{assert.throws(()=>apiKey('jhgc016'));assert.throws(()=>apiKey('sk-***'));assert.throws(()=>apiKey('sk-abc def'));const fake='sk-offline-test-placeholder-not-a-real-key';assert.equal(apiKey(' '+fake+' '),fake);const err=upstreamError(401,{error:{code:'invalid_api_key',message:'Incorrect key '+fake}});assert.ok(err.message.includes('invalid_api_key'));assert.ok(!err.message.includes(fake));assert.ok(!upstreamError(401,{error:{code:fake,message:fake}}).message.includes(fake));});
  check('upstream error categories',()=>{[400,401,403,404,413,429,500].forEach(s=>assert.ok(upstreamError(s).message.length>10));});
  const env={OPENAI_API_KEY:'offline-test-only',SCAN_ACCESS_TOKEN:'a'.repeat(32),ALLOWED_ORIGINS:'https://allowed.example'};
  let calls=0; const server=createServer(env,async(url,init)=>{calls++;assert.equal(url,'https://api.openai.com/v1/responses');assert.equal(JSON.parse(init.body).model,'gpt-6.1-sol');return {ok:true,json:async()=>response(data)};});

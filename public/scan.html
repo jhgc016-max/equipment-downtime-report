@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>스캔본 읽기 — 설비 비가동 집계 · 가동률 보고서</title>
-<meta name="description" content="손으로 쓴 생산작업일보 · 용접로봇 가동일보 스캔본(사진 · PDF)을 AI 비전으로 읽어 확인한 뒤 비가동 집계 입력 양식으로 보냅니다. API 키가 없으면 같은 표를 손으로 넣습니다.">
+<meta name="description" content="무료 PDF 텍스트 추출과 OCR로 작업일보를 읽고 원본과 확인한 뒤 집계합니다.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="robots" content="index,follow">
 <link rel="stylesheet" href="css/style.css">
@@ -23,22 +23,17 @@
   </div>
 </nav>
 
-<header class="hero"><div class="wrap">
-  <div class="eyebrow">생성형 AI 업무자동화 전문가과정 · 2차수 · 프로젝트 11 · v1.3</div>
-  <h1>작업일보 스캔본 읽기</h1>
-  <p>손으로 쓴 <b>생산작업일보(가공설비)</b>와 <b>자동용접 ROBOT 가동일보</b> 스캔본(사진 · PDF)을 올리면 AI 비전이 표를 읽어 옵니다.
-     읽은 값은 원본 옆에서 <b>사람이 확인 · 수정</b>한 뒤에만 집계 입력 양식으로 넘어갑니다. 키가 없으면 같은 표를 손으로 넣습니다. 동의한 파일은 브라우저에서 OpenAI로 직접 전송됩니다. API 키는 이 화면에서만 사용하며 브라우저 저장소에 저장하지 않습니다. OpenAI 보관 정책은 조직의 API 데이터 정책을 확인하세요.</p>
-</div></header>
+<header class="hero"><div class="wrap"><div class="eyebrow">설비 비가동 집계 · 가동률 보고서</div><h1>작업일보 스캔본 읽기</h1><p>생산작업일보(가공설비)와 자동용접 ROBOT 가동일보의 PDF·사진을 무료로 읽습니다. 문서는 브라우저에서 처리하며 API 키·결제가 필요 없습니다. 손글씨와 표는 잘못 인식될 수 있으므로 원본 옆에서 사람이 확인·수정한 뒤 집계로 보냅니다.</p></div></header>
 
 <main><div class="wrap">
 
 <section class="card" id="s-files">
   <h2 style="margin-top:0">1. 스캔본을 올리세요</h2>
-  <p class="sub">사진(JPG · PNG · WEBP)이 가장 잘 읽힙니다. GPT-6.1 Sol로 사진과 PDF를 읽습니다. 파일당 최대 10MB입니다. 한 장에 일보 한 장이 들어가게 찍어 주세요.</p>
+  <p class="sub">PDF · JPG · PNG · WEBP를 지원합니다. 파일당 최대 10MB, PDF 최대 30쪽입니다. 한 장에 일보 한 장이 들어가게 찍어 주세요.</p>
   <label class="drop" id="sc-drop">
     <input type="file" id="sc-file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
     <b>스캔본을 끌어다 놓거나 눌러서 고르세요(여러 장 가능)</b>
-    <span>API 키 입력과 전송 동의 후 OpenAI로 직접 전송됩니다. 별도 서버 설치는 필요 없습니다.</span>
+    <span>파일은 브라우저에서만 처리합니다. API 키·서버 설치·API 요금이 필요 없습니다.</span>
   </label>
   <div id="sc-thumbs" class="thumbs"></div>
   <div class="btnrow">
@@ -50,19 +45,11 @@
 </section>
 
 <section class="card" id="s-ai">
-  <h2 style="margin-top:0">2. AI 로 읽기 (선택)</h2>
-  <div class="ctrl">
-    <label>제공자 <select id="sc-provider"><option value="openai">OpenAI · GPT-6.1 Sol(사진 · PDF)</option></select></label>
-    <label>OpenAI API 키<input type="password" id="sc-key" autocomplete="off" spellcheck="false" placeholder="sk-… (이 화면에서만 사용)"></label>
-    <label>양식 <select id="sc-form"><option value="">자동(AI 가 판단)</option><option value="mach">생산작업일보(가공)</option><option value="weld">용접 ROBOT 가동일보</option></select></label>
-    <button class="x" id="sc-forget" type="button">API 키 지우기</button>
-  </div>
-  <div class="warn">
-    <b>보내기 전에 확인하세요.</b> 올린 사진·PDF 전체가 외부 OpenAI API로 직접 전송되며 API 사용 요금이 발생합니다. 작업자 이름 등 개인정보가 보이면 가린 뒤 올리거나, 사내 규정상 허용된 자료인지 먼저 확인해 주세요.
-    <label class="chk"><input type="checkbox" id="sc-agree"> 외부로 보내도 되는 자료임을 확인했습니다</label>
-  </div>
-  <div class="btnrow"><button class="btn primary" id="btn-sc-run" type="button" disabled>올린 스캔본 읽기</button></div>
-  <div id="sc-msg"></div>
+  <h2 style="margin-top:0">2. 무료로 PDF · 사진 읽기</h2>
+  <div class="ctrl"><label>양식 <select id="sc-form"><option value="">자동 (틀릴 경우 검토 화면에서 수정)</option><option value="mach">생산작업일보(가공)</option><option value="weld">용접 ROBOT 가동일보</option></select></label></div>
+  <div class="note">API 키와 결제가 필요 없습니다. PDF의 글자를 먼저 추출하고 스캔·사진은 한국어·영어 OCR로 읽습니다. 문서는 외부로 업로드하지 않고 이 브라우저에서 처리합니다. 처음 실행할 때 무료 PDF/OCR 프로그램과 언어 데이터를 인터넷에서 다운로드합니다. 파일당 10MB·PDF 최대 30쪽이며, 손글씨는 정확하지 않을 수 있어 반드시 원본과 대조해 주세요.</div>
+  <div class="btnrow"><button class="btn primary" id="btn-sc-run" type="button" disabled>무료로 읽기 (PDF · 사진)</button></div>
+  <div id="sc-msg" aria-live="polite"></div>
 </section>
 
 <section class="card" id="s-pages" hidden>
@@ -85,8 +72,8 @@
 <section class="card">
   <h2 style="margin-top:0">이번 판에서 하지 않는 것</h2>
   <ul class="ul">
-    <li><b>API 키 없이 자동 인식</b> — 브라우저 안 OCR 은 손글씨 한글 표를 믿을 만큼 읽지 못해 넣지 않았습니다. API 키가 없으면 「손으로 입력」으로 같은 표를 채웁니다.</li>
-    <li><b>확인 없이 집계</b> — AI 가 읽은 값은 반드시 사람이 본 뒤에 보냅니다. 읽기 확신이 낮거나 못 읽은 칸은 「확인할 것」에 올립니다.</li>
+    <li><b>완벽한 손글씨 인식</b> — 무료 OCR은 손글씨와 복잡한 표를 잘못 읽거나 놓칠 수 있습니다. 원본과 비교하고 누락된 행을 직접 추가하세요.</li>
+    <li><b>확인 없이 집계</b> — 무료 도구가 읽은 값은 반드시 사람이 본 뒤에 보냅니다. 읽기 확신이 낮거나 못 읽은 칸은 「확인할 것」에 올립니다.</li>
     <li>스캔본 보관 — 이 화면을 닫으면 이미지는 사라집니다(읽은 값만 집계 화면으로 넘어갑니다).</li>
   </ul>
 </section>
@@ -98,8 +85,8 @@
 <script src="lib/xlsx.full.min.js"></script>
 <script src="js/downtime.js"></script>
 <script src="js/scanread.js"></script>
-<script src="js/scan-api.js?v=direct-1"></script>
-<script src="js/scan.js?v=direct-1"></script>
+<script src="js/scan-local.js?v=local-1"></script>
+<script src="js/scan.js?v=local-1"></script>
 
 </body>
 </html>
