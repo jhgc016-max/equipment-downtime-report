@@ -73,7 +73,7 @@
 
 <section class="card" id="s-send" hidden>
   <h2 style="margin-top:0">4. 집계로 보내기</h2>
-  <p class="sub">읽은 줄을 이 도구의 입력 양식(설비 · 설비군 · 작업자 · 날짜 · 근무 · 구분 · 코드 · 시작 · 종료 · 소요 · 내용)으로 바꿉니다. 양식의 범례 이름으로 집계 코드표를 다시 찾아 맞춥니다.</p>
+  <p class="sub">읽은 줄을 이 도구의 입력 양식(설비 · 설비군 · 작업자 · 날짜 · 근무 · 구분 · 코드 · 시작 · 종료 · 소요 · 내용)으로 바꿉니다. 위에서 확인·수정한 범례 코드는 그대로 전달하며, 사유 이름은 집계 설정의 코드표에서 찾습니다.</p>
   <div id="sc-preview"></div><label class="chk"><input type="checkbox" id="sc-reviewed"> 모든 페이지의 원문·읽은 값·검토 항목을 확인했습니다. 남은 빈칸과 오류도 확인했습니다.</label>
   <div class="btnrow">
     <button class="btn primary" id="btn-sc-send" type="button">집계 화면으로 보내기</button>
@@ -97,9 +97,9 @@
 
 <script src="lib/xlsx.full.min.js"></script>
 <script src="js/downtime.js"></script>
-<script src="js/scanread.js"></script>
+<script src="js/scanread.js?v=legend-2"></script>
 <script src="js/scan-api.js?v=direct-1"></script>
-<script src="js/scan.js?v=direct-1"></script>
+<script src="js/scan.js?v=legend-2"></script>
 
 </body>
 </html>

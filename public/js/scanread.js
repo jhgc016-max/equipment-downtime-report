@@ -17,10 +17,10 @@
   /* ---------- 양식 2종(기획자 2026-11-04 드라이브 공유, 빈 양식) ---------- */
   var FORMS = {
     mach: { id: 'mach', name: '생산작업일보(가공설비)', group: '가공설비',
-      codes: [['A', '제관품대기'], ['B', '제관품無'], ['C', '장비고장'], ['D', '티칭수정'], ['E', '계획정지'], ['F', '공정결원'], ['G', '청소'], ['H', '기타']],
+      codes: [['A', '제관품無'], ['B', '장비고장'], ['C', '지그교체'], ['D', '계획정지'], ['E', '공정결원'], ['F', '청소'], ['G', '기타']],
       head: '사업부명 · 반명 · 설비명 · 작업자 · 시작시간 · 종료시간 · 작업일자(년 월 일)',
       work: '일 작업 내역 9줄: 순번 · 작업시간(시작~종료) · 기종 · 품명 · 작업명 · 수량 · 타각 · 비고',
-      down: '비가동 내역 6줄: 순번 · 범례(A~H) · 시작([시]:[분]) · 종료 · 불량/비가동 내역 · 비고',
+      down: '비가동 내역 6줄: 순번 · 범례(A~G, 원본 표기 우선) · 시작([시]:[분]) · 종료 · 불량/비가동 내역 · 비고',
       extra: '특이사항(공정 내 설비고장, 에어 · gas 누기, 용접기 이상, 유압 누유 등)' },
     weld: { id: 'weld', name: '자동용접 ROBOT 가동일보', group: '용접설비',
       codes: [['A', '제관품대기'], ['B', '제관품無'], ['C', '장비고장'], ['D', '티칭수정'], ['E', '계획정지'], ['F', '공정결원'], ['G', '청소'], ['H', '기타']],
@@ -28,8 +28,8 @@
       checks: '장비 점검 3항목: TCP(토치 원점 조정) · 노즐 클리너 및 와이어커터 점검 · 가스 체크 및 냉각수 순환기 점검 — 정상/비정상 표시, 점검/수리',
       work: '생산 현황 21줄: NO · Model · Start([시]:[분]) · Closing · 범례(A~H, 비가동일 때만) · Special Note' }
   };
-  // 양식의 비가동 범례는 가공 · 용접이 같은 글자 체계(A~H)를 쓴다(2026-11-04 양식). 집계 엔진의 설비군별 코드표와 글자가 다를 수 있어
-  // 변환할 때는 「범례 이름」으로 집계 코드표를 다시 찾는다(이름이 같으면 그 코드, 없으면 그대로 두고 확인에 올린다).
+  // 가공과 용접의 같은 글자는 서로 다른 사유일 수 있다. 원본 코드를 보존하고
+  // 집계 설정은 사유 이름 확인에만 사용한다. 이름으로 코드를 재배정하지 않는다.
 
   function clean(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
@@ -65,7 +65,9 @@
       '3. 반드시 JSON 하나만 답합니다. 설명 문장을 붙이지 않습니다.',
       '양식 두 가지: (1) 생산작업일보(가공설비) — ' + FORMS.mach.head + ' / ' + FORMS.mach.work + ' / ' + FORMS.mach.down + ' / ' + FORMS.mach.extra,
       '(2) 자동용접 ROBOT 가동일보 — ' + FORMS.weld.head + ' / ' + FORMS.weld.checks + ' / ' + FORMS.weld.work,
-      '비가동 범례: ' + FORMS.mach.codes.map(function (c) { return c[0] + ' ' + c[1]; }).join(', '),
+      '가공 비가동 범례: ' + FORMS.mach.codes.map(function (c) { return c[0] + ' ' + c[1]; }).join(', '),
+      '용접 비가동 범례: ' + FORMS.weld.codes.map(function (c) { return c[0] + ' ' + c[1]; }).join(', '),
+      '원본의 범례 글자를 그대로 옮깁니다. 사유 이름을 근거로 다른 글자로 변경하지 않습니다. 원본 인쇄 범례가 위 기본값과 다르면 원본을 우선하고 reviews 또는 unreadable에 차이를 남깁니다.',
       'JSON 모양: {"pages":[{"form":"mach"|"weld","equipment":"설비명 또는 트랙","worker":"작업자","date":"YYYY-MM-DD","start":"HH:MM","end":"HH:MM",' +
       '"work":[{"no":1,"start":"HH:MM","end":"HH:MM","model":"","part":"","job":"","qty":null,"note":""}],' +
       '"downtime":[{"no":1,"code":"A","start":"HH:MM","end":"HH:MM","note":""}],"checks":[{"item":"TCP","status":"정상"|"비정상"|null}],"special":"","unreadable":["칸 설명"],"confidence":"high"|"mid"|"low"}]}'
@@ -153,7 +155,7 @@
   /* ---------- 입력 양식으로 ---------- */
   var FORM_HEAD = ['설비', '설비군', '작업자', '날짜', '근무', '구분', '코드', '시작', '종료', '소요(분)', '내용'];
   function dur(s, e) { var a = minutes(s), b = minutes(e); return a != null && b != null && b > a ? b - a : ''; }
-  // codeMap: { mach: {양식 범례 이름 → 집계 코드}, weld: {...} } — 집계 엔진의 코드표 이름으로 맞춘다. 없으면 양식 글자를 그대로.
+  // codeMap supplies labels only. Always preserve the reviewed source code.
   function toFormRows(pages, codeMap) {
     var rows = [FORM_HEAD.slice()];
     (pages || []).forEach(function (p) {
@@ -164,7 +166,7 @@
       p.downtime.forEach(function (d) {
         if (!d.code && !d.rawCode && !d.start && !d.end && !d.note) return;        // 빈 줄(손 입력 틀)
         var c = d.code, name = legendName[c] || '';
-        if (map && name && map[name]) c = map[name];
+        if (map) name = Object.keys(map).filter(function (label) { return map[label] === c; })[0] || '';
         rows.push([p.equipment, group, p.worker, p.date, shift, '비가동', c, d.start, d.end, dur(d.start, d.end), (name ? name + (d.note ? ' — ' : '') : '') + d.note]); any = true;
       });
       p.work.forEach(function (w) {

@@ -9,7 +9,7 @@
   var state = { files: [], pages: [] };            // files: { name, mime, base64, url } · pages: { page, src(파일 이름), issues }
   function msg(id, html, cls) { $(id).innerHTML = html ? '<div class="' + (cls || 'note') + '">' + html + '</div>' : ''; }
   function settings() { try { return D.normSettings(JSON.parse(localStorage.getItem(LS_SET) || 'null') || {}); } catch (e) { return D.normSettings({}); } }
-  // 집계 엔진 코드표(설정 반영) — 범례 글자 목록과 「이름 → 코드」 표
+  // 집계 설정의 범례와 사유 이름. 전달할 원본 코드는 변경하지 않는다.
   function legend() { var st = settings(); return { mach: st.codes.map(function (c) { return c.code; }), weld: st.weldCodes.map(function (c) { return c.code; }) }; }
   function codeMap() { var st = settings(), m = { mach: {}, weld: {} }; st.codes.forEach(function (c) { m.mach[c.label] = c.code; }); st.weldCodes.forEach(function (c) { m.weld[c.label] = c.code; }); return m; }
 
@@ -80,7 +80,7 @@
       h += '<div class="fgrid">' + [['equipment', '설비명 · 트랙'], ['worker', '작업자'], ['date', '작업일자'], ['start', '시작시간'], ['end', '종료시간']].map(function (f) {
         return '<label>' + f[1] + '<input type="text" data-pf="' + f[0] + '" value="' + esc(p[f[0]]) + '" placeholder="' + (f[0] === 'date' ? '2026-11-03' : f[0] === 'start' || f[0] === 'end' ? '08:00' : '') + '"></label>';
       }).join('') + '<label>양식<select data-pf="form"><option value="mach"' + (p.form === 'mach' ? ' selected' : '') + '>생산작업일보(가공)</option><option value="weld"' + (p.form === 'weld' ? ' selected' : '') + '>용접 ROBOT 가동일보</option></select></label></div>';
-      h += '<h4>비가동 내역 <small class="sub">범례 ' + F.codes.map(function (c) { return c[0] + ' ' + c[1]; }).join(' · ') + '</small></h4>';
+      h += '<h4>비가동 내역 <small class="sub">범례 ' + settings()[p.form === 'weld' ? 'weldCodes' : 'codes'].map(function (c) { return c.code + ' ' + c.label; }).join(' · ') + '</small></h4>';
       h += '<div class="tablewrap"><table class="dt"><thead><tr><th>순번</th><th>범례</th><th>시작</th><th>종료</th><th>내역</th><th></th></tr></thead><tbody>' + p.downtime.map(function (d, di) {
         return '<tr><td>' + d.no + '</td><td><input class="code" data-dt="' + di + '" data-k="code" value="' + esc(d.code || d.rawCode) + '" maxlength="2"></td><td><input class="tm" data-dt="' + di + '" data-k="start" value="' + esc(d.start) + '"></td><td><input class="tm" data-dt="' + di + '" data-k="end" value="' + esc(d.end) + '"></td><td><input class="wide" data-dt="' + di + '" data-k="note" value="' + esc(d.note) + '"></td><td><button class="x" data-dt-del="' + di + '" type="button">빼기</button></td></tr>';
       }).join('') + '</tbody></table></div><div class="btnrow"><button class="btn sm" data-dt-add="' + pi + '" type="button">비가동 줄 더하기</button></div>';
