@@ -37,20 +37,18 @@
   async function runFile(f) {
     f.status='reading'; f.error='';renderThumbs();
     try {
-      var base=$('sc-relay').value.trim() || location.origin;
-      var url=new URL(base);
-      if(url.protocol!=='https:' && !(url.protocol==='http:' && /^(localhost|127\.0\.0\.1)$/.test(url.hostname))) throw new Error('중계 서버는 HTTPS 주소를 사용하세요.');
-      if(url.username || url.password || url.search || url.hash) throw new Error('중계 URL에는 암호·쿼리를 넣지 마세요.');
-      var rq=S.request(base,$('sc-key').value.trim(),[f],$('sc-form').value);
-      rq.init.signal=AbortSignal.timeout(195000);
-      var response=await fetch(rq.url,rq.init), j;
-      try {j=await response.json();}catch(e){throw new Error('중계 서버 응답을 읽을 수 없습니다. URL과 서버 실행 상태를 확인하세요.');}
-      if(!response.ok) throw new Error(j.error || '중계 서버 오류 '+response.status);
-      if(!Array.isArray(j.pages) || !j.pages.length) throw new Error('응답에 페이지가 없습니다.');
+      var api=window.ScanAPI;
+      var response=await fetch('https://api.openai.com/v1/responses',{
+        method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+$('sc-key').value.trim()},
+        body:JSON.stringify(api.buildRequest(f,$('sc-form').value)),signal:AbortSignal.timeout(195000),credentials:'omit',redirect:'error'
+      });
+      if(!response.ok) { await response.body?.cancel(); throw api.upstreamError(response.status); }
+      var payload;try {payload=await response.json();}catch(e){throw new Error('OpenAI 응답을 읽을 수 없습니다. 이 파일만 다시 처리하세요.');}
+      var j=api.convert(payload);
       j.pages.forEach(function(p){state.pages.push({page:p,src:f.name+' · '+p.sourcePage+'쪽',fileId:f.id});});
       state.pages.sort(function(a,b){return (a.fileId || 0)-(b.fileId || 0) || (a.page.sourcePage || 0)-(b.page.sourcePage || 0);});
       f.status='done'; $('sc-reviewed').checked=false;renderPages();
-    } catch(e) {f.status='failed';f.error=e.name==='TypeError'?'서버 연결 실패: 주소·HTTPS·접근 허용 설정을 확인하세요.':e.message;}
+    } catch(e) {f.status='failed';f.error=e.name==='TypeError'?'OpenAI 연결 실패: 인터넷 연결 또는 브라우저의 외부 요청 차단을 확인하세요.':e.message;}
     renderThumbs();
   }
   async function run(only) {

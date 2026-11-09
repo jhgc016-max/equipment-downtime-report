@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>스캔본 읽기 — 설비 비가동 집계 · 가동률 보고서</title>
-<meta name="description" content="손으로 쓴 생산작업일보 · 용접로봇 가동일보 스캔본(사진 · PDF)을 AI 비전으로 읽어 확인한 뒤 비가동 집계 입력 양식으로 보냅니다. 중계 서버를 사용할 수 없으면 같은 표를 손으로 넣습니다.">
+<meta name="description" content="손으로 쓴 생산작업일보 · 용접로봇 가동일보 스캔본(사진 · PDF)을 AI 비전으로 읽어 확인한 뒤 비가동 집계 입력 양식으로 보냅니다. API 키가 없으면 같은 표를 손으로 넣습니다.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="robots" content="index,follow">
 <link rel="stylesheet" href="css/style.css">
@@ -27,7 +27,7 @@
   <div class="eyebrow">생성형 AI 업무자동화 전문가과정 · 2차수 · 프로젝트 11 · v1.3</div>
   <h1>작업일보 스캔본 읽기</h1>
   <p>손으로 쓴 <b>생산작업일보(가공설비)</b>와 <b>자동용접 ROBOT 가동일보</b> 스캔본(사진 · PDF)을 올리면 AI 비전이 표를 읽어 옵니다.
-     읽은 값은 원본 옆에서 <b>사람이 확인 · 수정</b>한 뒤에만 집계 입력 양식으로 넘어갑니다. 키가 없으면 같은 표를 손으로 넣습니다. 동의한 파일은 중계 서버 메모리를 거쳐 OpenAI로 전송됩니다. 중계 서버는 파일·키·문서 내용을 저장하거나 로그에 기록하지 않습니다. OpenAI 보관 정책은 조직의 API 데이터 정책을 확인하세요.</p>
+     읽은 값은 원본 옆에서 <b>사람이 확인 · 수정</b>한 뒤에만 집계 입력 양식으로 넘어갑니다. 키가 없으면 같은 표를 손으로 넣습니다. 동의한 파일은 브라우저에서 OpenAI로 직접 전송됩니다. API 키는 이 화면에서만 사용하며 브라우저 저장소에 저장하지 않습니다. OpenAI 보관 정책은 조직의 API 데이터 정책을 확인하세요.</p>
 </div></header>
 
 <main><div class="wrap">
@@ -38,7 +38,7 @@
   <label class="drop" id="sc-drop">
     <input type="file" id="sc-file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
     <b>스캔본을 끌어다 놓거나 눌러서 고르세요(여러 장 가능)</b>
-    <span>AI 읽기 동의 후 중계 서버를 거쳐 OpenAI로 전송됩니다. 중계 서버는 파일을 디스크에 저장하지 않습니다.</span>
+    <span>API 키 입력과 전송 동의 후 OpenAI로 직접 전송됩니다. 별도 서버 설치는 필요 없습니다.</span>
   </label>
   <div id="sc-thumbs" class="thumbs"></div>
   <div class="btnrow">
@@ -53,12 +53,12 @@
   <h2 style="margin-top:0">2. AI 로 읽기 (선택)</h2>
   <div class="ctrl">
     <label>제공자 <select id="sc-provider"><option value="openai">OpenAI · GPT-6.1 Sol(사진 · PDF)</option></select></label>
-    <label>중계 서버 URL<input type="url" id="sc-relay" placeholder="같은 서버이면 비워 두세요"></label><label>중계 접근 암호<input type="password" id="sc-key" autocomplete="off" placeholder="관리자에게 받은 접근 암호"></label>
+    <label>OpenAI API 키<input type="password" id="sc-key" autocomplete="off" spellcheck="false" placeholder="sk-… (이 화면에서만 사용)"></label>
     <label>양식 <select id="sc-form"><option value="">자동(AI 가 판단)</option><option value="mach">생산작업일보(가공)</option><option value="weld">용접 ROBOT 가동일보</option></select></label>
-    <button class="x" id="sc-forget" type="button">접근 암호 지우기</button>
+    <button class="x" id="sc-forget" type="button">API 키 지우기</button>
   </div>
   <div class="warn">
-    <b>보내기 전에 확인하세요.</b> 올린 사진·PDF 전체가 중계 서버를 거쳐 외부 OpenAI API로 전송됩니다. 작업자 이름 등 개인정보가 보이면 가린 뒤 올리거나, 사내 규정상 허용된 자료인지 먼저 확인해 주세요.
+    <b>보내기 전에 확인하세요.</b> 올린 사진·PDF 전체가 외부 OpenAI API로 직접 전송되며 API 사용 요금이 발생합니다. 작업자 이름 등 개인정보가 보이면 가린 뒤 올리거나, 사내 규정상 허용된 자료인지 먼저 확인해 주세요.
     <label class="chk"><input type="checkbox" id="sc-agree"> 외부로 보내도 되는 자료임을 확인했습니다</label>
   </div>
   <div class="btnrow"><button class="btn primary" id="btn-sc-run" type="button" disabled>올린 스캔본 읽기</button></div>
@@ -85,7 +85,7 @@
 <section class="card">
   <h2 style="margin-top:0">이번 판에서 하지 않는 것</h2>
   <ul class="ul">
-    <li><b>서버 설정 없이 자동 인식</b> — 브라우저 안 OCR 은 손글씨 한글 표를 믿을 만큼 읽지 못해 넣지 않았습니다. 서버 설정이 없으면 「손으로 입력」으로 같은 표를 채웁니다.</li>
+    <li><b>API 키 없이 자동 인식</b> — 브라우저 안 OCR 은 손글씨 한글 표를 믿을 만큼 읽지 못해 넣지 않았습니다. API 키가 없으면 「손으로 입력」으로 같은 표를 채웁니다.</li>
     <li><b>확인 없이 집계</b> — AI 가 읽은 값은 반드시 사람이 본 뒤에 보냅니다. 읽기 확신이 낮거나 못 읽은 칸은 「확인할 것」에 올립니다.</li>
     <li>스캔본 보관 — 이 화면을 닫으면 이미지는 사라집니다(읽은 값만 집계 화면으로 넘어갑니다).</li>
   </ul>
@@ -98,7 +98,8 @@
 <script src="lib/xlsx.full.min.js"></script>
 <script src="js/downtime.js"></script>
 <script src="js/scanread.js"></script>
-<script src="js/scan.js"></script>
+<script src="js/scan-api.js?v=direct-1"></script>
+<script src="js/scan.js?v=direct-1"></script>
 
 </body>
 </html>

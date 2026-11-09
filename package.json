@@ -4,7 +4,7 @@
   "scripts": {
     "start": "node --env-file=.env server/server.cjs",
     "test": "node --test test/*.test.cjs",
-    "check": "node --check server/server.cjs && node --check server/extraction.cjs && node --check public/js/scan.js && node --check public/js/scanread.js"
+    "check": "node --check server/server.cjs && node --check server/extraction.cjs && node --check public/js/scan.js && node --check public/js/scanread.js && node --check public/js/scan-api.js"
   },
   "engines": {
     "node": ">=22"

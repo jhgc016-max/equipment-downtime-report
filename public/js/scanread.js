@@ -3,10 +3,10 @@
  * 브라우저(window.Scan)와 node(require) 겸용.
  *
  * 지키는 것
- *   - AI 는 서버의 환경변수 키와 중계 접근 암호로만 부른다. 외부 전송 동의가 필요하다.
+ *   - AI 는 화면에 입력한 키로 OpenAI에 직접 요청한다. 외부 전송 동의가 필요하다.
  *   - AI 답을 믿지 않는다 — JSON 만 꺼내고, 코드 · 시각 · 날짜를 검사해 틀린 칸은 「확인」으로 올리고, 사람이 고친 뒤에만 집계로 보낸다.
  *   - 읽을 수 없는 칸은 비워 둔다. 지어내지 않는다(지시문에도 적고, 답의 unreadable 을 그대로 보인다).
- *   - 동의한 파일은 중계 서버 메모리를 거쳐 OpenAI로 전송된다. 서버는 문서·키를 기록하지 않는다.
+ *   - 동의한 파일은 OpenAI로 직접 전송된다. 키는 브라우저 저장소에 기록하지 않는다.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -75,11 +75,6 @@
     return { system: sys, user: user };
   }
   var PROVIDERS = { openai: { model: 'gpt-6.1-sol' } };
-  // Browser talks only to the authenticated relay. No provider secret is accepted.
-  function request(base, token, files, form) {
-    return { url: base.replace(/\/$/, '') + '/api/scan', init: { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ file: { name: files[0].name, mime: files[0].mime, base64: files[0].base64 }, form: form || '' }) } };
-  }
-  function extractText(provider, json) { return JSON.stringify(json); }
   // AI 답 → pages. JSON 만 꺼낸다. pages 가 없고 page 하나 모양이면 감싼다.
   function parseReply(text) {
     var t = String(text || ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
@@ -200,5 +195,5 @@
   }
 
   return { FORMS: FORMS, FORM_HEAD: FORM_HEAD, PROVIDERS: PROVIDERS, time: time, minutes: minutes, date: date, code: code,
-    prompt: prompt, request: request, extractText: extractText, parseReply: parseReply, normalizePage: normalizePage, validate: validate, toFormRows: toFormRows, blankPage: blankPage, summary: summary, sampleReply: sampleReply };
+    prompt: prompt, parseReply: parseReply, normalizePage: normalizePage, validate: validate, toFormRows: toFormRows, blankPage: blankPage, summary: summary, sampleReply: sampleReply };
 });
