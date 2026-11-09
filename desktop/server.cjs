@@ -3,6 +3,17 @@ const http=require('node:http');const fs=require('node:fs/promises');const path=
 const API=require('../public/js/scan-api.js');
 const {encryption,openBrowser}=require('./windows-security.cjs');
 const root=path.resolve(__dirname,'../public');
+function completedScanResponse(result){
+ const response=result?.response;
+ if(!response || response.status!=='completed')throw new API.ScanError('AI 응답이 불완전합니다. 이 파일만 다시 처리하세요.');
+ const output=Array.isArray(response.output)?response.output:[];
+ const content=output.filter(o=>o.type==='message').flatMap(o=>o.content||[]);
+ if(content.some(c=>c.type==='refusal') || content.some(c=>c.type==='output_text' && typeof c.text==='string' && c.text.trim()))return response;
+ // Completion metadata can omit message content already delivered as deltas.
+ // Use only text from that same completed request; strict schema checks follow.
+ if(typeof result.text==='string' && result.text.trim())return {...response,output:[...output,{type:'message',content:[{type:'output_text',text:result.text}]}]};
+ throw new API.ScanError('완료 응답에 추출 텍스트가 없습니다. 이 파일만 다시 처리하세요.');
+}
 function safeSession(s){return {status:s.status,sharing:s.sharing===true,identity:s.identity?{name:s.identity.name,email:s.identity.email}:undefined};}
 function errorMessage(e){const code=typeof e?.code==='string'&&/^[a-z0-9_]{1,80}$/.test(e.code)?e.code:'connection_error';const messages={subscription_sharing_unsupported_capability:'현재 ChatGPT 구독 연결이 PDF·이미지 또는 구조화 응답 기능을 지원하지 않습니다.',subscription_sharing_user_not_eligible:'이 계정 또는 워크스페이스는 구독 연결 사용 대상이 아닙니다.',subscription_sharing_usage_limit_exceeded:'ChatGPT 구독 연결 사용 한도에 도달했습니다. 사용량 설정을 확인하세요.',subscription_sharing_usage_unavailable:'ChatGPT 사용량 확인이 일시적으로 불가능합니다. 잠시 후 다시 시도하세요.',model_not_found:'선택한 모델을 이 ChatGPT 계정에서 사용할 수 없습니다.',sharing_not_enabled:'ChatGPT 로그인은 되었지만 구독 사용 권한이 없습니다. 로그인 화면에서 사용 권한을 승인하세요.',sign_in_required:'ChatGPT에 로그인하세요.',reauth_required:'ChatGPT에 다시 로그인하세요.',cancelled:'작업을 취소했습니다.',insufficient_quota:'ChatGPT 구독 사용 한도에 도달했습니다. 계정의 사용량을 확인하세요.',model_unavailable:'선택한 모델을 현재 계정에서 사용할 수 없습니다.',invalid_request:'이 계정 또는 모델이 PDF·이미지 요청을 지원하지 않거나 요청이 거절되었습니다.',storage_encryption_unavailable:'Windows 보안 저장소를 사용할 수 없습니다.'};return (messages[code]||'ChatGPT 연결 또는 처리에 실패했습니다. 로그인·구독 권한과 사용 한도를 확인하세요.')+' ('+code+')';}
 function createLocalServer(client){
@@ -40,7 +51,7 @@ function createLocalServer(client){
      const models=await client.listModels({signal:controller.signal});if(!models.some(m=>m.slug===body.model))return send(400,{error:'현재 계정에서 선택한 모델을 사용할 수 없습니다. 모델 목록을 새로 확인하세요.'});
      const request=API.buildRequest(body.file,body.form);
      const result=await client.streamResponse({model:body.model,input:'',instructions:request.instructions,request:{input:request.input,text:request.text},signal:controller.signal});
-     return send(200,API.convert(result.response));
+     return send(200,API.convert(completedScanResponse(result)));
     }
     return send(404,{error:'지원하지 않는 경로입니다.'});
    }catch(e){return send(e instanceof API.ScanError?e.status:502,{error:e instanceof API.ScanError?e.message:errorMessage(e)});}finally{active=false;}
@@ -58,4 +69,4 @@ async function main(){
  const local=createLocalServer(client);const url=await local.start();console.log('ChatGPT login app running. Keep this window open; Ctrl+C stops it.');await openBrowser(url);
 }
 if(require.main===module)main().catch(()=>{console.error('로컬 앱 시작 실패. Node.js 설치와 npm install / npm run build:login 실행 상태를 확인하세요.');process.exitCode=1;});
-module.exports={createLocalServer,safeSession,errorMessage};
+module.exports={createLocalServer,safeSession,errorMessage,completedScanResponse};

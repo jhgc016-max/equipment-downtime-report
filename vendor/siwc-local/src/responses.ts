@@ -59,14 +59,25 @@ export async function streamResponse(
 
     let completed = false;
     let text = "";
+    const textParts = new Map<string, string>();
+    const outputItems = new Map<number, Record<string, unknown>>();
     let completedResponse: unknown;
     for await (const event of result.data) {
       requestSignal.throwIfAborted();
       if (!isObject(event)) continue;
       if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
-        text += event.delta;
+        const key = `${event.output_index ?? 0}:${event.content_index ?? 0}`;
+        textParts.set(key, (textParts.get(key) ?? "") + event.delta);
+        text = [...textParts.values()].join("");
         if (text.length > 16 * 1024 * 1024) throw new ChatGPTError("response_too_large", "The response was too large. Try a smaller request.");
         options.onDelta?.(event.delta);
+      } else if (event.type === "response.output_text.done" && typeof event.text === "string") {
+        const key = `${event.output_index ?? 0}:${event.content_index ?? 0}`;
+        textParts.set(key, event.text);
+        text = [...textParts.values()].join("");
+        if (text.length > 16 * 1024 * 1024) throw new ChatGPTError("response_too_large", "The response was too large. Try a smaller request.");
+      } else if (event.type === "response.output_item.done" && isObject(event.item)) {
+        outputItems.set(typeof event.output_index === "number" ? event.output_index : outputItems.size, event.item);
       } else if (event.type === "response.failed" || event.type === "error") {
         const detail = event.type === "response.failed" ? event.response : event;
         throw apiError(detail, response.status, result.request_id);
@@ -81,6 +92,14 @@ export async function streamResponse(
     // The SDK may finish iteration on an aborted connection without throwing.
     requestSignal.throwIfAborted();
     if (!completed) throw new ChatGPTError("stream_interrupted", "The response ended before completion. You can keep the partial text or try again.", true);
+    // Some direct-route streams put output in earlier events and omit it from
+    // response.completed. Keep completed items (including refusals) intact.
+    if (isObject(completedResponse) && completedResponse.status === "completed") {
+      const output = Array.isArray(completedResponse.output) ? completedResponse.output : [];
+      if (!output.length && outputItems.size) {
+        completedResponse = { ...completedResponse, output: [...outputItems.entries()].sort(([a], [b]) => a - b).map(([, item]) => item) };
+      }
+    }
     return { text, response: completedResponse };
   } catch (error) {
     if (signal.aborted) throw new ChatGPTError("cancelled", "The response was cancelled.");

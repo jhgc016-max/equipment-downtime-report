@@ -30,3 +30,26 @@ test('modified SDK sends PDF/schema with OAuth and returns the completed respons
 test('Windows DPAPI roundtrip and ciphertext rejection without persisted secrets',{skip:process.platform!=='win32'},async()=>{
  const e=require('../desktop/windows-security.cjs').encryption();assert.equal(await e.isAvailable(),true);const text='synthetic offline token';const cipher=await e.encrypt(text);assert.ok(!Buffer.from(cipher).includes(Buffer.from(text)));assert.equal(await e.decrypt(cipher),text);await assert.rejects(e.decrypt(Buffer.from('invalid ciphertext')));
 });
+
+test('completed metadata can omit JSON already present in delta or done events',async t=>{
+ const {completedScanResponse}=require('../desktop/server.cjs');
+ const {streamResponse}=await import(pathToFileURL(path.resolve(__dirname,'../vendor/siwc-local/dist/responses.js')).href);
+ const full=payload();const text=full.output[0].content[0].text;
+ const event=x=>'data: '+JSON.stringify(x)+'\n\n';let wire='';
+ t.mock.method(globalThis,'fetch',async()=>new Response(wire,{headers:{'content-type':'text/event-stream'}}));
+ for(const events of [
+  [{type:'response.output_text.delta',output_index:0,content_index:0,delta:text.slice(0,40)},{type:'response.output_text.delta',output_index:0,content_index:0,delta:text.slice(40)}],
+  [{type:'response.output_text.done',output_index:0,content_index:0,text}],
+  [{type:'response.output_item.done',output_index:0,item:full.output[0]}],
+  [{type:'response.output_text.delta',output_index:0,content_index:0,delta:text},{type:'response.output_text.done',output_index:0,content_index:0,text}],
+ ]){
+  wire=events.map(event).join('')+event({type:'response.completed',response:{status:'completed'}});
+  const result=await streamResponse('synthetic-test-token',{model:'gpt-6.1-sol',input:'test'},new AbortController().signal);
+  assert.equal(API.convert(completedScanResponse(result)).pages[0].sourcePage,1);
+ }
+ assert.throws(()=>completedScanResponse({text,response:{status:'incomplete'}}));
+ assert.throws(()=>API.convert(completedScanResponse({text:'{broken',response:{status:'completed'}})));
+ assert.throws(()=>API.convert(completedScanResponse({text:'{}',response:{status:'completed'}})));
+ assert.throws(()=>API.convert(completedScanResponse({text,response:{status:'completed',output:[{type:'message',content:[{type:'refusal',refusal:'test'}]}]}})));
+ assert.throws(()=>completedScanResponse({text:'',response:{status:'completed'}}));
+});
