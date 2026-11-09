@@ -5,6 +5,7 @@
   var S = window.Scan, D = window.Downtime;
   var LS_AI = 'build-2611-11.ai', LS_SCAN = 'build-2611-11.scan', LS_SET = 'build-2611-11.settings';
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var busy = false, nextId = 1;
   var state = { files: [], pages: [] };            // files: { name, mime, base64, url } · pages: { page, src(파일 이름), issues }
   function msg(id, html, cls) { $(id).innerHTML = html ? '<div class="' + (cls || 'note') + '">' + html + '</div>' : ''; }
   function settings() { try { return D.normSettings(JSON.parse(localStorage.getItem(LS_SET) || 'null') || {}); } catch (e) { return D.normSettings({}); } }
@@ -14,37 +15,51 @@
 
   /* ---------- 1. 파일 ---------- */
   function addFiles(list) {
-    Array.prototype.forEach.call(list, function (f) {
-      var rd = new FileReader();
-      rd.onload = function (e) {
-        var b64 = String(e.target.result).split(',')[1] || '';
-        state.files.push({ name: f.name, mime: f.type || (/\.pdf$/i.test(f.name) ? 'application/pdf' : 'image/jpeg'), base64: b64, url: e.target.result });
-        renderThumbs();
-      };
+    Array.prototype.forEach.call(list, function(f) {
+      var mime=f.type || (/\.pdf$/i.test(f.name)?'application/pdf':'');
+      if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(mime) || f.size > 10*1024*1024) { msg('sc-msg',esc(f.name)+': JPG·PNG·WEBP·PDF, 최대 10MB만 지원합니다.','warn'); return; }
+      var item={id:nextId++,name:f.name,mime:mime,status:'loading'};
+      state.files.push(item);
+      var rd=new FileReader();
+      rd.onload=function(e) {item.url=URL.createObjectURL(f);item.base64=String(e.target.result).split(',')[1];item.status='pending';renderThumbs();};
+      rd.onerror=function(){item.status='failed';item.error='파일 읽기 실패';renderThumbs();};
       rd.readAsDataURL(f);
     });
+    renderThumbs();
   }
   function renderThumbs() {
     $('sc-thumbs').innerHTML = state.files.map(function (f, i) {
-      return '<figure class="thumb">' + (/pdf/i.test(f.mime) ? '<div class="pdfbox">PDF</div>' : '<img src="' + f.url + '" alt="' + esc(f.name) + '">') + '<figcaption>' + esc(f.name) + ' <button class="x" data-rm="' + i + '" type="button">빼기</button></figcaption></figure>';
+      return '<figure class="thumb">' + (/pdf/i.test(f.mime) ? '<div class="pdfbox">PDF</div>' : '<img src="' + (f.url || '') + '" alt="' + esc(f.name) + '">') + '<figcaption>' + esc(f.name) + ' · ' + esc(f.error || ({loading:'파일 읽는 중',pending:'대기',reading:'AI 처리 중',done:'완료',failed:'실패'})[f.status]) + (f.status === 'failed' && f.base64 ? ' <button type="button" data-retry="' + i + '">이 파일 다시 처리</button>' : '') + ' <button class="x" data-rm="' + i + '" type="button">빼기</button></figcaption></figure>';
     }).join('');
     syncRun();
   }
-  function syncRun() { $('btn-sc-run').disabled = !(state.files.length && $('sc-agree').checked && $('sc-key').value.trim()); }
-
-  /* ---------- 2. AI ---------- */
-  function run() {
-    var provider = $('sc-provider').value, key = $('sc-key').value.trim();
-    try { localStorage.setItem(LS_AI, JSON.stringify({ provider: provider, key: key })); } catch (e) { /* 무시 */ }
-    var rq;
-    try { rq = S.request(provider, key, state.files.map(function (f) { return { mime: f.mime, base64: f.base64 }; }), S.prompt($('sc-form').value)); }
-    catch (err) { msg('sc-msg', esc(err.message), 'warn'); return; }
-    $('btn-sc-run').disabled = true; msg('sc-msg', 'AI 가 ' + state.files.length + '장을 읽는 중입니다… (장수와 해상도에 따라 10~60초)', 'note');
-    fetch(rq.url, rq.init)
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && (j.error.message || j.error.type)) || ('HTTP ' + r.status)); return j; }); })
-      .then(function (j) { usePages(S.parseReply(S.extractText(provider, j)), state.files.map(function (f) { return f.name; }).join(', ')); })
-      .catch(function (err) { msg('sc-msg', 'AI 읽기가 실패했습니다: ' + esc(err.message) + ' — 「손으로 입력」으로 같은 표를 채울 수 있습니다.', 'warn'); })
-      .then(syncRun);
+  function syncRun() { $('btn-sc-run').disabled = busy || !(state.files.some(function(f){return f.status==='pending';}) && $('sc-agree').checked && $('sc-key').value.trim()); }
+  async function runFile(f) {
+    f.status='reading'; f.error='';renderThumbs();
+    try {
+      var base=$('sc-relay').value.trim() || location.origin;
+      var url=new URL(base);
+      if(url.protocol!=='https:' && !(url.protocol==='http:' && /^(localhost|127\.0\.0\.1)$/.test(url.hostname))) throw new Error('중계 서버는 HTTPS 주소를 사용하세요.');
+      if(url.username || url.password || url.search || url.hash) throw new Error('중계 URL에는 암호·쿼리를 넣지 마세요.');
+      var rq=S.request(base,$('sc-key').value.trim(),[f],$('sc-form').value);
+      rq.init.signal=AbortSignal.timeout(195000);
+      var response=await fetch(rq.url,rq.init), j;
+      try {j=await response.json();}catch(e){throw new Error('중계 서버 응답을 읽을 수 없습니다. URL과 서버 실행 상태를 확인하세요.');}
+      if(!response.ok) throw new Error(j.error || '중계 서버 오류 '+response.status);
+      if(!Array.isArray(j.pages) || !j.pages.length) throw new Error('응답에 페이지가 없습니다.');
+      j.pages.forEach(function(p){state.pages.push({page:p,src:f.name+' · '+p.sourcePage+'쪽',fileId:f.id});});
+      state.pages.sort(function(a,b){return (a.fileId || 0)-(b.fileId || 0) || (a.page.sourcePage || 0)-(b.page.sourcePage || 0);});
+      f.status='done'; $('sc-reviewed').checked=false;renderPages();
+    } catch(e) {f.status='failed';f.error=e.name==='TypeError'?'서버 연결 실패: 주소·HTTPS·접근 허용 설정을 확인하세요.':e.message;}
+    renderThumbs();
+  }
+  async function run(only) {
+    if(busy || !$('sc-agree').checked || !$('sc-key').value.trim()) return;
+    busy=true;syncRun();
+    var files=only?[only]:state.files.filter(function(f){return f.status==='pending';});
+    for(var f of files) {msg('sc-msg',esc(f.name)+' 읽는 중…','note');await runFile(f);}
+    busy=false;syncRun();
+    msg('sc-msg',state.files.some(function(f){return f.status==='failed';})?'일부 파일이 실패했습니다. 파일별 오류를 확인하고 해당 파일만 다시 처리하세요.':'읽기가 끝났습니다. 원본과 모든 페이지를 확인하세요.',state.files.some(function(f){return f.status==='failed';})?'warn':'ok');
   }
   function usePages(r, src) {
     if (r.error) { msg('sc-msg', esc(r.error), 'warn'); return; }
@@ -61,9 +76,9 @@
     $('sc-count').textContent = state.pages.length + '장';
     $('sc-pages').innerHTML = state.pages.map(function (e, pi) {
       var p = e.page, F = S.FORMS[p.form], issues = S.validate(p, lg); e.issues = issues;
-      var img = state.files.filter(function (f) { return e.src.indexOf(f.name) >= 0 && !/pdf/i.test(f.mime); })[0];
+      var img = state.files.filter(function(f) {return f.id === e.fileId;})[0];
       var h = '<div class="page" data-p="' + pi + '"><div class="page-h"><h3>' + (pi + 1) + '. ' + esc(F.name) + '</h3><span class="sub">' + esc(e.src) + '</span>' + (p.confidence ? '<span class="tag' + (p.confidence === 'low' ? ' bad-t' : '') + '">AI 확신 ' + esc(p.confidence) + '</span>' : '') + '<button class="x" data-del-page="' + pi + '" type="button">이 장 빼기</button></div>';
-      h += '<div class="page-body">' + (img ? '<div class="orig"><img src="' + img.url + '" alt="원본"></div>' : '') + '<div class="vals">';
+      h += '<div class="page-body">' + (img ? '<div class="orig">' + (/pdf/i.test(img.mime) ? '<iframe title="PDF 원본" style="width:100%;height:650px" src="' + img.url + '#page=' + p.sourcePage + '"></iframe><a target="_blank" rel="noopener" href="' + img.url + '#page=' + p.sourcePage + '">원본 페이지 열기</a>' : '<img src="' + img.url + '" alt="원본">') + '</div>' : '') + '<div class="vals">';
       h += '<div class="fgrid">' + [['equipment', '설비명 · 트랙'], ['worker', '작업자'], ['date', '작업일자'], ['start', '시작시간'], ['end', '종료시간']].map(function (f) {
         return '<label>' + f[1] + '<input type="text" data-pf="' + f[0] + '" value="' + esc(p[f[0]]) + '" placeholder="' + (f[0] === 'date' ? '2026-11-03' : f[0] === 'start' || f[0] === 'end' ? '08:00' : '') + '"></label>';
       }).join('') + '<label>양식<select data-pf="form"><option value="mach"' + (p.form === 'mach' ? ' selected' : '') + '>생산작업일보(가공)</option><option value="weld"' + (p.form === 'weld' ? ' selected' : '') + '>용접 ROBOT 가동일보</option></select></label></div>';
@@ -75,11 +90,13 @@
         return '<tr><td>' + w.no + '</td><td><input class="tm" data-wk="' + wi + '" data-k="start" value="' + esc(w.start) + '"></td><td><input class="tm" data-wk="' + wi + '" data-k="end" value="' + esc(w.end) + '"></td><td><input class="wide" data-wk="' + wi + '" data-k="job" value="' + esc([w.model, w.part, w.job].filter(Boolean).join(' · ')) + '"></td><td><input class="code" data-wk="' + wi + '" data-k="qty" value="' + esc(w.qty) + '"></td><td><input data-wk="' + wi + '" data-k="note" value="' + esc(w.note) + '"></td><td><button class="x" data-wk-del="' + wi + '" type="button">빼기</button></td></tr>';
       }).join('') + '</tbody></table></div><div class="btnrow"><button class="btn sm" data-wk-add="' + pi + '" type="button">작업 줄 더하기</button></div></details>';
       if (p.checks.length) h += '<p class="sub">장비 점검: ' + p.checks.map(function (c) { return esc(c.item) + ' ' + (c.status || '(미표시)'); }).join(' · ') + '</p>';
+      if (p.raw) h += '<details><summary>AI가 읽은 원문 (수정 전)</summary><pre style="white-space:pre-wrap">' + esc(JSON.stringify(p.raw,null,2)) + '</pre></details>';
       if (p.special) h += '<p class="sub">특이사항: ' + esc(p.special) + '</p>';
       h += issues.length ? '<div class="warn"><b>확인할 것 ' + issues.length + '건</b><ul>' + issues.map(function (x) { return '<li>' + esc(x.where) + ' — ' + esc(x.what) + '</li>'; }).join('') + '</ul></div>' : '<div class="ok">확인할 것이 없습니다.</div>';
       h += '</div></div></div>';
       return h;
     }).join('');
+    $('sc-reviewed').checked = false;
     renderPreview();
   }
   function renderPreview() {
@@ -87,7 +104,7 @@
     $('sc-preview').innerHTML = '<p class="sub">입력 양식 ' + (rows.length - 1) + '줄(비가동 ' + sm.downtime + ' · 가동 ' + sm.work + ') · 비가동 합계 ' + sm.downMinutes + '분</p><div class="tablewrap small"><table><thead><tr>' + rows[0].map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       rows.slice(1, 40).map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' + (rows.length > 41 ? '<p class="sub">… 외 ' + (rows.length - 41) + '줄</p>' : '');
   }
-  function pageAt(el) { var box = el.closest('.page'); return state.pages[+box.dataset.p]; }
+  function pageAt(el) { var box = el.closest('.page'); return box ? state.pages[+box.dataset.p] : null; }
   function onEdit(e) {
     var t = e.target, pe = pageAt(t); if (!pe) return; var p = pe.page;
     if (t.dataset.pf) { p[t.dataset.pf] = t.dataset.pf === 'form' ? t.value : (t.dataset.pf === 'date' ? (S.date(t.value) || t.value.trim()) : (t.dataset.pf === 'start' || t.dataset.pf === 'end') ? (S.time(t.value) || t.value.trim()) : t.value.trim()); }
@@ -111,6 +128,8 @@
   /* ---------- 4. 보내기 ---------- */
   function rows() { return S.toFormRows(state.pages.map(function (e) { return e.page; }), codeMap()); }
   function send() {
+    if (busy) { msg('sc-send-msg','AI 처리가 끝난 후 모든 페이지를 확인하세요.','warn'); return; }
+    if (!$('sc-reviewed').checked) { msg('sc-send-msg','원본과 검토 항목을 확인한 후 확인란을 선택하세요.','warn'); return; }
     var r = rows(); if (r.length < 2) { msg('sc-send-msg', '보낼 줄이 없습니다.', 'warn'); return; }
     var open = state.pages.reduce(function (n, e) { return n + (e.issues || []).length; }, 0);
     try { localStorage.setItem(LS_SCAN, JSON.stringify({ at: new Date().toISOString(), name: '스캔본 읽은 값(' + state.pages.length + '장)', aoa: r, issues: open })); }
@@ -118,6 +137,8 @@
     location.href = 'index.html#scan';
   }
   function xlsx() {
+    if (busy) { msg('sc-send-msg','AI 처리가 끝난 후 모든 페이지를 확인하세요.','warn'); return; }
+    if (!$('sc-reviewed').checked) { msg('sc-send-msg','원본 확인란을 선택한 후 내려받으세요.','warn'); return; }
     var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows()), '비가동일보');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(D.legendRows(settings())), '범례');
     XLSX.writeFile(wb, '비가동일보_스캔본읽기_' + new Date().toISOString().slice(0, 10) + '.xlsx');
@@ -129,15 +150,19 @@
   ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { addFiles(e.dataTransfer.files); });
   $('sc-file').addEventListener('change', function () { addFiles(this.files); this.value = ''; });
-  $('sc-thumbs').addEventListener('click', function (e) { if (e.target.dataset.rm != null) { state.files.splice(+e.target.dataset.rm, 1); renderThumbs(); } });
+  $('sc-thumbs').addEventListener('click',function(e){
+    if(busy) return;
+    if(e.target.dataset.retry!=null) {run(state.files[+e.target.dataset.retry]);return;}
+    if(e.target.dataset.rm!=null) {var f=state.files.splice(+e.target.dataset.rm,1)[0];URL.revokeObjectURL(f.url);state.pages=state.pages.filter(function(p){return p.fileId!==f.id;});renderThumbs();renderPages();}
+  });
   $('btn-sc-sample').addEventListener('click', function () { usePages(S.parseReply(S.sampleReply()), '예제(가짜 일보)'); });
   $('btn-sc-manual').addEventListener('click', function () { state.pages.push({ page: S.blankPage('mach'), src: '손으로 입력' }); renderPages(); });
   $('btn-sc-manual-w').addEventListener('click', function () { state.pages.push({ page: S.blankPage('weld'), src: '손으로 입력' }); renderPages(); });
-  $('btn-sc-clear').addEventListener('click', function () { state.files = []; state.pages = []; renderThumbs(); renderPages(); msg('sc-msg', ''); });
-  try { var ai = JSON.parse(localStorage.getItem(LS_AI) || 'null'); if (ai) { $('sc-provider').value = ai.provider; $('sc-key').value = ai.key; } } catch (e) { /* 없음 */ }
+  $('btn-sc-clear').addEventListener('click', function () { if(busy) return; state.files.forEach(function(f){URL.revokeObjectURL(f.url);});state.files = []; state.pages = []; renderThumbs(); renderPages(); msg('sc-msg', ''); });
+  try {localStorage.removeItem(LS_AI);} catch(e) {}
   $('sc-forget').addEventListener('click', function () { localStorage.removeItem(LS_AI); $('sc-key').value = ''; syncRun(); });
   ['input', 'change'].forEach(function (t) { $('sc-key').addEventListener(t, syncRun); $('sc-agree').addEventListener(t, syncRun); });
-  $('btn-sc-run').addEventListener('click', run);
+  $('btn-sc-run').addEventListener('click', function(){run();});
   $('sc-pages').addEventListener('change', onEdit);
   $('sc-pages').addEventListener('click', onClick);
   $('btn-sc-send').addEventListener('click', send);

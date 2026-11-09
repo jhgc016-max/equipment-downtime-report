@@ -3,10 +3,10 @@
  * 브라우저(window.Scan)와 node(require) 겸용.
  *
  * 지키는 것
- *   - AI 는 키를 넣고 외부 전송을 확인했을 때만 부른다. 키가 없으면 같은 표를 손으로 넣는다.
+ *   - AI 는 서버의 환경변수 키와 중계 접근 암호로만 부른다. 외부 전송 동의가 필요하다.
  *   - AI 답을 믿지 않는다 — JSON 만 꺼내고, 코드 · 시각 · 날짜를 검사해 틀린 칸은 「확인」으로 올리고, 사람이 고친 뒤에만 집계로 보낸다.
  *   - 읽을 수 없는 칸은 비워 둔다. 지어내지 않는다(지시문에도 적고, 답의 unreadable 을 그대로 보인다).
- *   - 스캔본과 읽은 값은 이 브라우저 밖으로 나가지 않는다(AI 전송 제외). 저장소에는 가짜 예제뿐이다.
+ *   - 동의한 파일은 중계 서버 메모리를 거쳐 OpenAI로 전송된다. 서버는 문서·키를 기록하지 않는다.
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -41,18 +41,18 @@
     if (!m) return null;
     var h = +m[1], mi = m[2] != null ? +m[2] : 0;
     if (pm && h < 12) h += 12;
-    if (h > 24 || mi > 59) return null;
+    if (h > 24 || mi > 59 || (h === 24 && mi !== 0)) return null;
     return pad2(h) + ':' + pad2(mi);
   }
-  function minutes(t) { var m = /^(\d{2}):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; }
+  function minutes(t) { var m = /^(\d{2}):(\d{2})$/.exec(t || ''); return m && +m[1] <= 24 && +m[2] < 60 && (+m[1] < 24 || +m[2] === 0) ? +m[1] * 60 + +m[2] : null; }
   function date(v) {
     var s = clean(v); if (!s) return null;
     var m = s.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/); if (!m) { m = s.match(/^(\d{4})(\d{2})(\d{2})$/); }
     if (!m) return null;
-    var y = +m[1], mo = +m[2], d = +m[3]; if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    var y = +m[1], mo = +m[2], d = +m[3]; if (mo < 1 || mo > 12 || d < 1 || d > new Date(Date.UTC(y, mo, 0)).getUTCDate()) return null;
     return y + '-' + pad2(mo) + '-' + pad2(d);
   }
-  function code(v) { var s = clean(v).toUpperCase().replace(/[^A-H]/g, ''); return s ? s.charAt(0) : ''; }
+  function code(v) { var s = clean(v).toUpperCase(); return /^[A-H]$/.test(s) ? s : ''; }
 
   /* ---------- AI 지시문 ---------- */
   function prompt(formHint) {
@@ -74,28 +74,12 @@
       '위 JSON 모양으로 모든 칸을 옮겨 주세요. 비가동 줄은 범례 코드 · 시작 · 종료 · 내역이 핵심입니다. 손글씨가 흐리면 null 로 두고 unreadable 에 적어 주세요. 사진이 여러 장이면 pages 에 장마다 하나씩 넣어 주세요.';
     return { system: sys, user: user };
   }
-  var PROVIDERS = { openai: { model: 'gpt-4o-mini', url: 'https://api.openai.com/v1/chat/completions' }, anthropic: { model: 'claude-haiku-5-5', url: 'https://api.anthropic.com/v1/messages' } };
-  // files: [{ mime, base64 }] — 사진(jpeg/png/webp). PDF 는 Anthropic 만 문서로 받는다. OpenAI 에 PDF 가 오면 error.
-  function request(provider, key, files, pr) {
-    var p = PROVIDERS[provider]; if (!p) throw new Error('모르는 제공자: ' + provider);
-    if (!files || !files.length) throw new Error('읽을 파일이 없습니다.');
-    var pdfs = files.filter(function (f) { return /pdf/i.test(f.mime); });
-    if (provider === 'openai') {
-      if (pdfs.length) throw new Error('OpenAI 로는 PDF 를 바로 보낼 수 없습니다. 사진(JPG · PNG)으로 올리거나 Anthropic 을 고르세요.');
-      return { url: p.url, init: { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-        body: JSON.stringify({ model: p.model, temperature: 0, max_tokens: 4000, messages: [{ role: 'system', content: pr.system },
-          { role: 'user', content: [{ type: 'text', text: pr.user }].concat(files.map(function (f) { return { type: 'image_url', image_url: { url: 'data:' + f.mime + ';base64,' + f.base64, detail: 'high' } }; })) }] }) } };
-    }
-    return { url: p.url, init: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: p.model, max_tokens: 4000, system: pr.system, messages: [{ role: 'user', content: files.map(function (f) {
-        return /pdf/i.test(f.mime) ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } } : { type: 'image', source: { type: 'base64', media_type: f.mime, data: f.base64 } };
-      }).concat([{ type: 'text', text: pr.user }]) }] }) } };
+  var PROVIDERS = { openai: { model: 'gpt-6.1-sol' } };
+  // Browser talks only to the authenticated relay. No provider secret is accepted.
+  function request(base, token, files, form) {
+    return { url: base.replace(/\/$/, '') + '/api/scan', init: { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ file: { name: files[0].name, mime: files[0].mime, base64: files[0].base64 }, form: form || '' }) } };
   }
-  function extractText(provider, json) {
-    if (!json) return '';
-    if (provider === 'openai') return (((json.choices || [])[0] || {}).message || {}).content || '';
-    return (json.content || []).filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('');
-  }
+  function extractText(provider, json) { return JSON.stringify(json); }
   // AI 답 → pages. JSON 만 꺼낸다. pages 가 없고 page 하나 모양이면 감싼다.
   function parseReply(text) {
     var t = String(text || ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
@@ -112,16 +96,21 @@
       work: [], downtime: [], checks: [], special: clean(p.special), unreadable: Array.isArray(p.unreadable) ? p.unreadable.map(clean).filter(Boolean) : [], confidence: /^(high|mid|low)$/.test(p.confidence) ? p.confidence : '' };
     (Array.isArray(p.work) ? p.work : []).forEach(function (w, i) {
       w = w || {}; var row = { no: w.no != null ? +w.no : i + 1, start: time(w.start) || clean(w.start), end: time(w.end) || clean(w.end), model: clean(w.model), part: clean(w.part), job: clean(w.job), qty: w.qty == null || w.qty === '' ? '' : clean(w.qty), note: clean(w.note), code: code(w.code) };
-      if (row.start || row.end || row.model || row.job || row.part) out.work.push(row);
+      if (clean(w.code) && !row.code) out.unreadable.push('생산 ' + row.no + '줄 범례 코드: ' + clean(w.code));
+      out.work.push(row);
     });
     (Array.isArray(p.downtime) ? p.downtime : []).forEach(function (d, i) {
       d = d || {}; var row = { no: d.no != null ? +d.no : i + 1, code: code(d.code), rawCode: clean(d.code), start: time(d.start) || clean(d.start), end: time(d.end) || clean(d.end), note: clean(d.note) };
-      if (row.code || row.rawCode || row.start || row.end || row.note) out.downtime.push(row);
+      out.downtime.push(row);
     });
     // 용접 양식: 생산 현황 줄에 범례가 적힌 줄은 비가동이다 — downtime 으로 옮긴다
     if (form === 'weld') out.work.filter(function (w) { return w.code; }).forEach(function (w) { out.downtime.push({ no: w.no, code: w.code, rawCode: w.code, start: w.start, end: w.end, note: w.note || w.model }); });
     out.work = out.work.filter(function (w) { return !(form === 'weld' && w.code); });
     (Array.isArray(p.checks) ? p.checks : []).forEach(function (c) { c = c || {}; if (clean(c.item)) out.checks.push({ item: clean(c.item), status: /비정상/.test(clean(c.status)) ? '비정상' : /정상/.test(clean(c.status)) ? '정상' : '' }); });
+    out.raw = p.raw || null;
+    out.sourcePage = p.sourcePage || null;
+    out.reviews = p.reviews || [];
+    // Keep every extracted row, including unreadable rows, for human review.
     return out;
   }
 
@@ -135,6 +124,15 @@
     if (!/^\d{4}-\d{2}-\d{2}$/.test(page.date || '')) issues.push({ where: '머리', what: '작업일자를 읽지 못했습니다' + (page.date ? ': ' + page.date : '') });
     if (page.start && !/^\d{2}:\d{2}$/.test(page.start)) issues.push({ where: '머리', what: '시작시간을 시각으로 읽지 못했습니다: ' + page.start });
     if (page.end && !/^\d{2}:\d{2}$/.test(page.end)) issues.push({ where: '머리', what: '종료시간을 시각으로 읽지 못했습니다: ' + page.end });
+    if (page.start && minutes(page.start) == null || page.end && minutes(page.end) == null) issues.push({where:'머리', what:'시간 범위가 올바르지 않습니다'});
+    if (minutes(page.start) != null && minutes(page.end) != null && minutes(page.end) <= minutes(page.start)) issues.push({where:'머리', what:'종료가 시작보다 빠르거나 같습니다'});
+    if (page.date && !date(page.date)) issues.push({where:'머리', what:'존재하지 않는 날짜입니다'});
+    (page.reviews || []).forEach(function(r) { issues.push({where: '원본 ' + page.sourcePage + '쪽 · ' + r.field, what:r.reason}); });
+    ['work','downtime'].forEach(function(k) { page[k].forEach(function(r,i,arr) {
+      if (i && r.no !== arr[i-1].no + 1) issues.push({where:k + ' ' + r.no + '줄',what:'행 번호 누락 또는 순서 확인'});
+      if (!r.start || !r.end) issues.push({where:k + ' ' + r.no + '줄',what:'시작·종료 시간의 빈칸을 원본에서 확인하세요'});
+      if (minutes(r.start) != null && minutes(page.start) != null && minutes(r.start) < minutes(page.start) || minutes(r.end) != null && minutes(page.end) != null && minutes(r.end) > minutes(page.end)) issues.push({where:k+' '+r.no+'줄',what:'일보 전체 시간 밖의 행입니다'});
+    }); });
     var spans = [];
     page.downtime.forEach(function (d) {
       var w = '비가동 ' + d.no + '줄';

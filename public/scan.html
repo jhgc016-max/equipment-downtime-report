@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>스캔본 읽기 — 설비 비가동 집계 · 가동률 보고서</title>
-<meta name="description" content="손으로 쓴 생산작업일보 · 용접로봇 가동일보 스캔본(사진 · PDF)을 AI 비전으로 읽어 확인한 뒤 비가동 집계 입력 양식으로 보냅니다. 키가 없으면 같은 표를 손으로 넣습니다.">
+<meta name="description" content="손으로 쓴 생산작업일보 · 용접로봇 가동일보 스캔본(사진 · PDF)을 AI 비전으로 읽어 확인한 뒤 비가동 집계 입력 양식으로 보냅니다. 중계 서버를 사용할 수 없으면 같은 표를 손으로 넣습니다.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <meta name="robots" content="index,follow">
 <link rel="stylesheet" href="css/style.css">
@@ -27,18 +27,18 @@
   <div class="eyebrow">생성형 AI 업무자동화 전문가과정 · 2차수 · 프로젝트 11 · v1.3</div>
   <h1>작업일보 스캔본 읽기</h1>
   <p>손으로 쓴 <b>생산작업일보(가공설비)</b>와 <b>자동용접 ROBOT 가동일보</b> 스캔본(사진 · PDF)을 올리면 AI 비전이 표를 읽어 옵니다.
-     읽은 값은 원본 옆에서 <b>사람이 확인 · 수정</b>한 뒤에만 집계 입력 양식으로 넘어갑니다. 키가 없으면 같은 표를 손으로 넣습니다. 스캔본은 AI 전송 외에는 이 브라우저 밖으로 나가지 않습니다.</p>
+     읽은 값은 원본 옆에서 <b>사람이 확인 · 수정</b>한 뒤에만 집계 입력 양식으로 넘어갑니다. 키가 없으면 같은 표를 손으로 넣습니다. 동의한 파일은 중계 서버 메모리를 거쳐 OpenAI로 전송됩니다. 중계 서버는 파일·키·문서 내용을 저장하거나 로그에 기록하지 않습니다. OpenAI 보관 정책은 조직의 API 데이터 정책을 확인하세요.</p>
 </div></header>
 
 <main><div class="wrap">
 
 <section class="card" id="s-files">
   <h2 style="margin-top:0">1. 스캔본을 올리세요</h2>
-  <p class="sub">사진(JPG · PNG · WEBP)이 가장 잘 읽힙니다. PDF 는 Anthropic 으로만 보낼 수 있습니다. 한 장에 일보 한 장이 들어가게 찍어 주세요.</p>
+  <p class="sub">사진(JPG · PNG · WEBP)이 가장 잘 읽힙니다. GPT-6.1 Sol로 사진과 PDF를 읽습니다. 파일당 최대 10MB입니다. 한 장에 일보 한 장이 들어가게 찍어 주세요.</p>
   <label class="drop" id="sc-drop">
-    <input type="file" id="sc-file" accept="image/*,.pdf" multiple>
+    <input type="file" id="sc-file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
     <b>스캔본을 끌어다 놓거나 눌러서 고르세요(여러 장 가능)</b>
-    <span>파일은 서버로 올라가지 않습니다 · AI 로 보낼 때만 그 서비스로 전송됩니다</span>
+    <span>AI 읽기 동의 후 중계 서버를 거쳐 OpenAI로 전송됩니다. 중계 서버는 파일을 디스크에 저장하지 않습니다.</span>
   </label>
   <div id="sc-thumbs" class="thumbs"></div>
   <div class="btnrow">
@@ -52,13 +52,13 @@
 <section class="card" id="s-ai">
   <h2 style="margin-top:0">2. AI 로 읽기 (선택)</h2>
   <div class="ctrl">
-    <label>제공자 <select id="sc-provider"><option value="openai">OpenAI · gpt-4o-mini(사진)</option><option value="anthropic">Anthropic · claude-haiku-5-5(사진 · PDF)</option></select></label>
-    <label>API 키 <input type="password" id="sc-key" autocomplete="off" placeholder="sk-…"></label>
+    <label>제공자 <select id="sc-provider"><option value="openai">OpenAI · GPT-6.1 Sol(사진 · PDF)</option></select></label>
+    <label>중계 서버 URL<input type="url" id="sc-relay" placeholder="같은 서버이면 비워 두세요"></label><label>중계 접근 암호<input type="password" id="sc-key" autocomplete="off" placeholder="관리자에게 받은 접근 암호"></label>
     <label>양식 <select id="sc-form"><option value="">자동(AI 가 판단)</option><option value="mach">생산작업일보(가공)</option><option value="weld">용접 ROBOT 가동일보</option></select></label>
-    <button class="x" id="sc-forget" type="button">키 지우기</button>
+    <button class="x" id="sc-forget" type="button">접근 암호 지우기</button>
   </div>
   <div class="warn">
-    <b>보내기 전에 확인하세요.</b> 올린 스캔본 이미지가 외부 AI 서비스로 전송됩니다. 작업자 이름 등 개인정보가 보이면 가린 뒤 올리거나, 사내 규정상 허용된 자료인지 먼저 확인해 주세요.
+    <b>보내기 전에 확인하세요.</b> 올린 사진·PDF 전체가 중계 서버를 거쳐 외부 OpenAI API로 전송됩니다. 작업자 이름 등 개인정보가 보이면 가린 뒤 올리거나, 사내 규정상 허용된 자료인지 먼저 확인해 주세요.
     <label class="chk"><input type="checkbox" id="sc-agree"> 외부로 보내도 되는 자료임을 확인했습니다</label>
   </div>
   <div class="btnrow"><button class="btn primary" id="btn-sc-run" type="button" disabled>올린 스캔본 읽기</button></div>
@@ -74,7 +74,7 @@
 <section class="card" id="s-send" hidden>
   <h2 style="margin-top:0">4. 집계로 보내기</h2>
   <p class="sub">읽은 줄을 이 도구의 입력 양식(설비 · 설비군 · 작업자 · 날짜 · 근무 · 구분 · 코드 · 시작 · 종료 · 소요 · 내용)으로 바꿉니다. 양식의 범례 이름으로 집계 코드표를 다시 찾아 맞춥니다.</p>
-  <div id="sc-preview"></div>
+  <div id="sc-preview"></div><label class="chk"><input type="checkbox" id="sc-reviewed"> 모든 페이지의 원문·읽은 값·검토 항목을 확인했습니다. 남은 빈칸과 오류도 확인했습니다.</label>
   <div class="btnrow">
     <button class="btn primary" id="btn-sc-send" type="button">집계 화면으로 보내기</button>
     <button class="btn green" id="btn-sc-xlsx" type="button">입력 양식 엑셀로 내려받기</button>
@@ -85,7 +85,7 @@
 <section class="card">
   <h2 style="margin-top:0">이번 판에서 하지 않는 것</h2>
   <ul class="ul">
-    <li><b>키 없이 자동 인식</b> — 브라우저 안 OCR 은 손글씨 한글 표를 믿을 만큼 읽지 못해 넣지 않았습니다. 키가 없으면 「손으로 입력」으로 같은 표를 채웁니다.</li>
+    <li><b>서버 설정 없이 자동 인식</b> — 브라우저 안 OCR 은 손글씨 한글 표를 믿을 만큼 읽지 못해 넣지 않았습니다. 서버 설정이 없으면 「손으로 입력」으로 같은 표를 채웁니다.</li>
     <li><b>확인 없이 집계</b> — AI 가 읽은 값은 반드시 사람이 본 뒤에 보냅니다. 읽기 확신이 낮거나 못 읽은 칸은 「확인할 것」에 올립니다.</li>
     <li>스캔본 보관 — 이 화면을 닫으면 이미지는 사라집니다(읽은 값만 집계 화면으로 넘어갑니다).</li>
   </ul>
