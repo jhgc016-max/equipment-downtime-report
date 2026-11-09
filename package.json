@@ -4,9 +4,20 @@
   "scripts": {
     "start": "node --env-file=.env server/server.cjs",
     "test": "node --test test/*.test.cjs",
-    "check": "node --check server/server.cjs && node --check server/extraction.cjs && node --check public/js/scan.js && node --check public/js/scanread.js && node --check public/js/scan-api.js"
+    "check": "node --check server/server.cjs && node --check server/extraction.cjs && node --check public/js/scan.js && node --check public/js/scanread.js && node --check public/js/scan-api.js && node --check desktop/server.cjs && node --check desktop/windows-security.cjs && node --check public/js/scan-login.js",
+    "build:login": "npm run build --prefix vendor/siwc-local",
+    "start:login": "npm run build:login && node desktop/server.cjs",
+    "test:sdk": "node --test vendor/siwc-local/test/*.test.mjs",
+    "pretest": "npm run build:login"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "@siwc/local": "file:vendor/siwc-local"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "@types/node": "^24.0.0"
   }
 }

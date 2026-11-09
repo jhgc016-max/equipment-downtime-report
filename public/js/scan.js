@@ -33,10 +33,13 @@
     }).join('');
     syncRun();
   }
-  function syncRun() { $('btn-sc-run').disabled = busy || !(state.files.some(function(f){return f.status==='pending';}) && $('sc-agree').checked && $('sc-key').value.trim()); }
+  function canRead() { return $('sc-provider').value === 'chatgpt' ? window.ScanChatGPT && window.ScanChatGPT.ready() : !!$('sc-key').value.trim(); }
+  function syncRun() { $('btn-sc-run').disabled = busy || !(state.files.some(function(f){return f.status==='pending';}) && $('sc-agree').checked && canRead()); }
   async function runFile(f) {
     f.status='reading'; f.error='';renderThumbs();
     try {
+      var j;
+      if ($('sc-provider').value === 'chatgpt') { j=await window.ScanChatGPT.read(f,$('sc-form').value); } else {
       var api=window.ScanAPI;
       var response=await fetch('https://api.openai.com/v1/responses',{
         method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+$('sc-key').value.trim()},
@@ -44,7 +47,8 @@
       });
       if(!response.ok) { await response.body?.cancel(); throw api.upstreamError(response.status); }
       var payload;try {payload=await response.json();}catch(e){throw new Error('OpenAI 응답을 읽을 수 없습니다. 이 파일만 다시 처리하세요.');}
-      var j=api.convert(payload);
+      j=api.convert(payload);
+      }
       j.pages.forEach(function(p){state.pages.push({page:p,src:f.name+' · '+p.sourcePage+'쪽',fileId:f.id});});
       state.pages.sort(function(a,b){return (a.fileId || 0)-(b.fileId || 0) || (a.page.sourcePage || 0)-(b.page.sourcePage || 0);});
       f.status='done'; $('sc-reviewed').checked=false;renderPages();
@@ -52,7 +56,7 @@
     renderThumbs();
   }
   async function run(only) {
-    if(busy || !$('sc-agree').checked || !$('sc-key').value.trim()) return;
+    if(busy || !$('sc-agree').checked || !canRead()) return;
     busy=true;syncRun();
     var files=only?[only]:state.files.filter(function(f){return f.status==='pending';});
     for(var f of files) {msg('sc-msg',esc(f.name)+' 읽는 중…','note');await runFile(f);}
@@ -165,5 +169,6 @@
   $('sc-pages').addEventListener('click', onClick);
   $('btn-sc-send').addEventListener('click', send);
   $('btn-sc-xlsx').addEventListener('click', xlsx);
+  if (window.ScanChatGPT) window.ScanChatGPT.init(syncRun);
   syncRun();
 })();
