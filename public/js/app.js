@@ -300,8 +300,6 @@
   function renderReport() {
     var L = D.summaryLines(state.res, state.kind);
     $('summary').innerHTML = '<h4>요약 — 규칙으로 만든 문장입니다</h4><ul>' + L.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul>';
-    $('ai-out').innerHTML = state.ai ? '<div class="ai-draft"><span class="tag">AI 초안 — 검토 필요</span><ul>' + state.ai.lines.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul>' +
-      '<label class="chk" style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:13.5px"><input type="checkbox" id="ai-use"' + (state.ai.use ? ' checked' : '') + '> 보고서에 AI 문장을 씁니다</label></div>' : '';
     $('preview').srcdoc = reportHtml();
   }
   document.addEventListener('change', function (e) { if (e.target.id === 'ai-use' && state.ai) { state.ai.use = e.target.checked; $('preview').srcdoc = reportHtml(); } });
@@ -349,22 +347,7 @@
   });
   $('btn-reset').addEventListener('click', function () { state.files = []; state.sample = false; renderFiles(); clearResult(); });
 
-  /* ---------- AI (선택) ---------- */
-  try { var ai = JSON.parse(localStorage.getItem(LS_AI) || 'null'); if (ai) { $('ai-provider').value = ai.provider; $('ai-key').value = ai.key; } } catch (e) { /* 저장값 없음 */ }
-  $('ai-forget').addEventListener('click', function () { localStorage.removeItem(LS_AI); $('ai-key').value = ''; });
-  $('ai-run').addEventListener('click', function () {
-    var provider = $('ai-provider').value, key = $('ai-key').value.trim(), out = $('ai-out');
-    if (!state.res) return;
-    if (!key) { out.innerHTML = '<div class="warn">API 키를 넣어 주세요. 키가 없어도 위의 규칙 요약과 보고서는 그대로 쓸 수 있습니다.</div>'; return; }
-    if (!window.confirm('요약 문장과 ' + KIND[state.kind] + '별 가동률 · 사유 집계가 ' + (provider === 'openai' ? 'OpenAI' : 'Anthropic') +
-      ' 로 전송됩니다.\n사내 자료를 외부 AI 로 보내도 되는지 확인하셨나요?')) return;
-    try { localStorage.setItem(LS_AI, JSON.stringify({ provider: provider, key: key })); } catch (e) { /* 저장 실패는 무시 */ }
-    var rq = D.aiRequest(provider, key, D.aiPrompt(state.res, state.kind));
-    out.innerHTML = '<div class="note">AI 에 요청하는 중입니다…</div>';
-    fetch(rq.url, rq.init).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && (j.error.message || j.error.type)) || r.status); return j; }); })
-      .then(function (j) { var lines = D.aiLines(provider, j); if (!lines.length) throw new Error('빈 응답'); state.ai = { lines: lines, use: false }; renderReport(); })
-      .catch(function (err) { out.innerHTML = '<div class="warn">AI 요청이 실패했습니다: ' + esc(err.message) + '. 규칙 요약은 그대로 쓸 수 있습니다.</div>'; });
-  });
+  try { localStorage.removeItem(LS_AI); } catch (e) {}
 
   fillSettings(saved);
   renderGroups();

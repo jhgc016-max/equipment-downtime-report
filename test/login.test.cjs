@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');const {test}=require('node:test');const {pathToFileURL}=require('node:url');const path=require('node:path');
-const {createLocalServer,errorMessage}=require('../desktop/server.cjs');const API=require('../public/js/scan-api.js');
+const {createLocalServer,errorMessage}=require('../desktop/server.cjs');const API=require('../desktop/extraction.cjs');
 const file={mime:'application/pdf',base64:Buffer.from('%PDF-synthetic').toString('base64')};
 function fixture(s){if(Array.isArray(s.type))return null;if(s.enum)return s.enum[0];if(s.type==='object')return Object.fromEntries(Object.entries(s.properties).map(([k,v])=>[k,fixture(v)]));if(s.type==='array')return [];if(s.type==='integer')return 1;return '';}
 function payload(){const p=fixture(API.schema.properties.pages.items);return {status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({pageCount:1,pages:[p]})}]}]};}

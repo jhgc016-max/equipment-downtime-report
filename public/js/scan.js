@@ -33,22 +33,12 @@
     }).join('');
     syncRun();
   }
-  function canRead() { return $('sc-provider').value === 'chatgpt' ? window.ScanChatGPT && window.ScanChatGPT.ready() : !!$('sc-key').value.trim(); }
+  function canRead() { return !!(window.ScanChatGPT && window.ScanChatGPT.ready()); }
   function syncRun() { $('btn-sc-run').disabled = busy || !(state.files.some(function(f){return f.status==='pending';}) && $('sc-agree').checked && canRead()); }
   async function runFile(f) {
     f.status='reading'; f.error='';renderThumbs();
     try {
-      var j;
-      if ($('sc-provider').value === 'chatgpt') { j=await window.ScanChatGPT.read(f,$('sc-form').value); } else {
-      var api=window.ScanAPI;
-      var response=await fetch('https://api.openai.com/v1/responses',{
-        method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+$('sc-key').value.trim()},
-        body:JSON.stringify(api.buildRequest(f,$('sc-form').value)),signal:AbortSignal.timeout(195000),credentials:'omit',redirect:'error'
-      });
-      if(!response.ok) { await response.body?.cancel(); throw api.upstreamError(response.status); }
-      var payload;try {payload=await response.json();}catch(e){throw new Error('OpenAI 응답을 읽을 수 없습니다. 이 파일만 다시 처리하세요.');}
-      j=api.convert(payload);
-      }
+      var j=await window.ScanChatGPT.read(f,$('sc-form').value);
       j.pages.forEach(function(p){state.pages.push({page:p,src:f.name+' · '+p.sourcePage+'쪽',fileId:f.id});});
       state.pages.sort(function(a,b){return (a.fileId || 0)-(b.fileId || 0) || (a.page.sourcePage || 0)-(b.page.sourcePage || 0);});
       f.status='done'; $('sc-reviewed').checked=false;renderPages();
@@ -162,8 +152,7 @@
   $('btn-sc-manual-w').addEventListener('click', function () { state.pages.push({ page: S.blankPage('weld'), src: '손으로 입력' }); renderPages(); });
   $('btn-sc-clear').addEventListener('click', function () { if(busy) return; state.files.forEach(function(f){URL.revokeObjectURL(f.url);});state.files = []; state.pages = []; renderThumbs(); renderPages(); msg('sc-msg', ''); });
   try {localStorage.removeItem(LS_AI);} catch(e) {}
-  $('sc-forget').addEventListener('click', function () { localStorage.removeItem(LS_AI); $('sc-key').value = ''; syncRun(); });
-  ['input', 'change'].forEach(function (t) { $('sc-key').addEventListener(t, syncRun); $('sc-agree').addEventListener(t, syncRun); });
+  ['input', 'change'].forEach(function (t) { $('sc-agree').addEventListener(t, syncRun); });
   $('btn-sc-run').addEventListener('click', function(){run();});
   $('sc-pages').addEventListener('change', onEdit);
   $('sc-pages').addEventListener('click', onClick);

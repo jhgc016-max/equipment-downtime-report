@@ -1,6 +1,6 @@
 'use strict';
 const http=require('node:http');const fs=require('node:fs/promises');const path=require('node:path');const os=require('node:os');const {randomBytes,timingSafeEqual}=require('node:crypto');
-const API=require('../public/js/scan-api.js');
+const API=require('./extraction.cjs');
 const {encryption,openBrowser}=require('./windows-security.cjs');
 const root=path.resolve(__dirname,'../public');
 function completedScanResponse(result){

@@ -1119,46 +1119,15 @@
     return { sheets: sheetsOut, month: month, workdays: days, note: '예제 데이터는 실제 사내 데이터가 아닙니다(설비 · 작업자 · 수리 이력 모두 만든 값).' };
   }
 
-  /* ---------- AI (선택) ---------- */
-  var AI = {
-    openai: { model: 'gpt-4o-mini', url: 'https://api.openai.com/v1/chat/completions' },
-    anthropic: { model: 'claude-haiku-5-5', url: 'https://api.anthropic.com/v1/messages' }
-  };
-  function aiPrompt(res, kind) {
-    var A = res.kinds[kind];
-    var system = '당신은 생산기술팀의 월간 설비 운영실적 보고서 「요약」 문장을 다듬는 편집자입니다. ' +
-      '주어진 사실만 쓰고 숫자 · 날짜 · 설비 이름 · 사유를 바꾸거나 새로 만들지 마세요. 원인 추정이나 대책을 지어내지 마세요. ' +
-      '보고서 문체로 한 줄에 한 항목, 4~7줄, 각 줄은 「- 」로 시작합니다. 머리말 · 맺음말 없이 줄만 출력하세요.';
-    var facts = summaryLines(res, kind).map(function (l) { return '- ' + l; }).join('\n') + '\n\n[대상별]\n' +
-      A.bySubject.map(function (s) { return '- ' + s.subject + ': 가동률 ' + pct(s.util) + ', 비가동 ' + fmtH(s.down) + '시간' + (s.top ? ', 주 사유 ' + codeName(s.top) : ''); }).join('\n') +
-      '\n\n[사유 파레토]\n' + A.pareto.map(function (p) { return '- ' + codeName(p) + ' ' + fmtH(p.min) + '시간 (' + pct(p.pct) + ', 누적 ' + pct(p.cum) + ')'; }).join('\n');
-    return { system: system, user: '다음 규칙 기반 요약을 다듬어 주세요.\n\n' + facts };
-  }
-  function aiRequest(provider, key, prompt) {
-    var p = AI[provider];
-    if (!p) throw new Error('알 수 없는 제공자: ' + provider);
-    if (provider === 'openai') return { url: p.url, init: { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-      body: JSON.stringify({ model: p.model, temperature: 0.2, messages: [{ role: 'system', content: prompt.system }, { role: 'user', content: prompt.user }] }) } };
-    return { url: p.url, init: { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: p.model, max_tokens: 1024, system: prompt.system, messages: [{ role: 'user', content: prompt.user }] }) } };
-  }
-  function aiLines(provider, json) {
-    var t = '';
-    if (provider === 'openai') t = json && json.choices && json.choices[0] && json.choices[0].message ? json.choices[0].message.content : '';
-    else t = json && json.content ? json.content.filter(function (b) { return b.type === 'text'; }).map(function (b) { return b.text; }).join('\n') : '';
-    return String(t || '').split(/\r?\n/).map(function (l) { return l.replace(/^\s*[-*•·]\s*|^\s*\d+[.)]\s*/, '').trim(); }).filter(Boolean);
-  }
-
   return {
     DEFAULTS: DEFAULTS, DEFAULT_CODES: DEFAULT_CODES, DEFAULT_WELD_CODES: DEFAULT_WELD_CODES, GROUP_NAME: GROUP_NAME, GROUP_IDS: GROUP_IDS,
     autoGroup: autoGroup, judgeName: judgeName, judgeGroup: judgeGroup, withPlannerEquip: withPlannerEquip, PLANNER_EQUIP: PLANNER_EQUIP, PLANNER_EQUIP_DATE: PLANNER_EQUIP_DATE,
-    MACH_WORDS: MACH_WORDS, WELD_WORDS: WELD_WORDS, groupOf: groupOf, keyOf: keyOf, keyLabel: keyLabel, keyName: keyName, planFormula: planFormula, codeName: codeName, TYPES: TYPES, FORM_HEAD: FORM_HEAD, UNKNOWN: UNKNOWN, AI: AI,
+    MACH_WORDS: MACH_WORDS, WELD_WORDS: WELD_WORDS, groupOf: groupOf, keyOf: keyOf, keyLabel: keyLabel, keyName: keyName, planFormula: planFormula, codeName: codeName, TYPES: TYPES, FORM_HEAD: FORM_HEAD, UNKNOWN: UNKNOWN,
     normSettings: normSettings, parseRests: parseRests, shiftInfo: shiftInfo, shiftOf: shiftOf, shiftName: shiftName, codeLabel: codeLabel,
     parseTime: parseTime, parseDate: parseDate, parseRange: parseRange, fmtTime: fmtTime, serialToISO: serialToISO, isoToSerial: isoToSerial, weekday: weekday,
     normCode: normCode, normClass: normClass, extractCodes: extractCodes, overlapMin: overlapMin, unionLen: unionLen,
     detectSheet: detectSheet, parseSheet: parseSheet, merge: merge, analyze: analyze, pareto: pareto, util: util,
     summaryLines: summaryLines, reportHtml: reportHtml, sheets: sheets, toUtilSheet: toUtilSheet, templateSheets: templateSheets, legendRows: legendRows,
-    sample: sample, fmtH: fmtH, pct: pct, won: won, round: round, esc: esc, basisText: basisText,
-    aiPrompt: aiPrompt, aiRequest: aiRequest, aiLines: aiLines
+    sample: sample, fmtH: fmtH, pct: pct, won: won, round: round, esc: esc, basisText: basisText
   };
 });

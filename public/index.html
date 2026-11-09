@@ -157,26 +157,7 @@
   <div class="ctrl"><label>부서 이름(선택) <input type="text" id="team" placeholder="예: 생산기술팀"></label></div>
   <div id="summary" class="draftbox"></div>
 
-  <details class="ai" id="ai-box">
-    <summary>AI 로 요약 문장 다듬기 (선택)</summary>
-    <p class="sub">규칙으로 만든 요약을 보고서 문체로 다듬습니다. 숫자 · 날짜 · 설비 이름은 바꾸지 않도록 요청합니다.
-       키는 이 브라우저에만 저장됩니다. 보내기 전에 한 번 더 묻습니다. 키가 없어도 보고서는 그대로 만들어집니다.</p>
-    <div class="form">
-      <label>제공자
-        <select id="ai-provider">
-          <option value="openai">OpenAI (gpt-4o-mini)</option>
-          <option value="anthropic">Anthropic (claude-haiku-5-5)</option>
-        </select></label>
-      <label class="wide">API 키 <input type="password" id="ai-key" autocomplete="off" placeholder="sk-..."></label>
-    </div>
-    <div class="btnrow">
-      <button class="btn" id="ai-run">AI 로 다듬기</button>
-      <button class="btn" id="ai-forget">저장된 키 지우기</button>
-    </div>
-    <div id="ai-out"></div>
-  </details>
-
-  <div class="btnrow">
+<div class="btnrow">
     <button class="btn primary" id="btn-print">보고서 인쇄하기</button>
     <button class="btn" id="btn-html">보고서 HTML 저장</button>
     <button class="btn green" id="btn-export">엑셀로 내보내기</button>
