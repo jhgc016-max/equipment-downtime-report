@@ -16,7 +16,7 @@ function completedScanResponse(result){
 }
 function safeSession(s){return {status:s.status,sharing:s.sharing===true,identity:s.identity?{name:s.identity.name,email:s.identity.email}:undefined};}
 function errorMessage(e){const code=typeof e?.code==='string'&&/^[a-z0-9_]{1,80}$/.test(e.code)?e.code:'connection_error';const messages={subscription_sharing_unsupported_capability:'현재 ChatGPT 구독 연결이 PDF·이미지 또는 구조화 응답 기능을 지원하지 않습니다.',subscription_sharing_user_not_eligible:'이 계정 또는 워크스페이스는 구독 연결 사용 대상이 아닙니다.',subscription_sharing_usage_limit_exceeded:'ChatGPT 구독 연결 사용 한도에 도달했습니다. 사용량 설정을 확인하세요.',subscription_sharing_usage_unavailable:'ChatGPT 사용량 확인이 일시적으로 불가능합니다. 잠시 후 다시 시도하세요.',model_not_found:'선택한 모델을 이 ChatGPT 계정에서 사용할 수 없습니다.',sharing_not_enabled:'ChatGPT 로그인은 되었지만 구독 사용 권한이 없습니다. 로그인 화면에서 사용 권한을 승인하세요.',sign_in_required:'ChatGPT에 로그인하세요.',reauth_required:'ChatGPT에 다시 로그인하세요.',cancelled:'작업을 취소했습니다.',insufficient_quota:'ChatGPT 구독 사용 한도에 도달했습니다. 계정의 사용량을 확인하세요.',model_unavailable:'선택한 모델을 현재 계정에서 사용할 수 없습니다.',invalid_request:'이 계정 또는 모델이 PDF·이미지 요청을 지원하지 않거나 요청이 거절되었습니다.',storage_encryption_unavailable:'Windows 보안 저장소를 사용할 수 없습니다.'};return (messages[code]||'ChatGPT 연결 또는 처리에 실패했습니다. 로그인·구독 권한과 사용 한도를 확인하세요.')+' ('+code+')';}
-function createLocalServer(client){
+function createLocalServer(client,{port=0}={}){
  const token=randomBytes(32).toString('hex'),launch=randomBytes(32).toString('hex');let bootUsed=false,active=false,minute=0,count=0;
  let origin;
  const server=http.createServer(async(req,res)=>{
@@ -60,13 +60,13 @@ function createLocalServer(client){
   try{const pathname=decodeURIComponent(url.pathname);const target=path.resolve(root,'.'+(pathname==='/'?'/scan.html':pathname));if(!target.startsWith(root+path.sep))return send(404,{error:'파일이 없습니다.'});const content=await fs.readFile(target);const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};res.writeHead(200,{...headers,'Content-Type':types[path.extname(target)]||'application/octet-stream'});res.end(req.method==='HEAD'?undefined:content);}catch{send(404,{error:'파일이 없습니다.'});}
  });
  server.requestTimeout=650000;server.headersTimeout=15000;
- return {server,async start(){await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));origin='http://127.0.0.1:'+server.address().port;return origin+'/open/'+launch;}};
+ return {server,async start(){await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});origin='http://127.0.0.1:'+server.address().port;return origin+'/open/'+launch;}};
 }
 async function main(){
  if(process.platform!=='win32')throw new Error('이 실행기는 Windows를 지원합니다.');
  const {createChatGPT}=await import('@siwc/local');
  const client=createChatGPT({appName:'Equipment Downtime Report',appId:'equipment-downtime-report',redirectPort:0,sendHostId:true,storageDir:path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'AppData','Local'),'EquipmentDowntimeReport','chatgpt'),credentialEncryption:encryption(),openBrowser});
- const local=createLocalServer(client);const url=await local.start();console.log('ChatGPT login app running. Keep this window open; Ctrl+C stops it.');await openBrowser(url);
+ const local=createLocalServer(client,{port:8788});const url=await local.start();console.log('ChatGPT login app running. Keep this window open; Ctrl+C stops it.');await openBrowser(url);
 }
-if(require.main===module)main().catch(()=>{console.error('로컬 앱 시작 실패. Node.js 설치와 npm install / npm run build:login 실행 상태를 확인하세요.');process.exitCode=1;});
+if(require.main===module)main().catch(()=>{console.error('로컬 앱 시작 실패. 기존 실행 창을 닫아 8788 포트를 비운 뒤 Node.js 설치와 npm install / npm run build:login 실행 상태를 확인하세요.');process.exitCode=1;});
 module.exports={createLocalServer,safeSession,errorMessage,completedScanResponse};

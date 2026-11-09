@@ -5,7 +5,7 @@
   var S = window.Scan, D = window.Downtime;
   var LS_AI = 'build-2611-11.ai', LS_SCAN = 'build-2611-11.scan', LS_SET = 'build-2611-11.settings';
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-  var busy = false, nextId = 1;
+  var busy = false, sending = false, nextId = 1;
   var state = { files: [], pages: [] };            // files: { name, mime, base64, url } · pages: { page, src(파일 이름), issues }
   function msg(id, html, cls) { $(id).innerHTML = html ? '<div class="' + (cls || 'note') + '">' + html + '</div>' : ''; }
   function settings() { try { return D.normSettings(JSON.parse(localStorage.getItem(LS_SET) || 'null') || {}); } catch (e) { return D.normSettings({}); } }
@@ -119,13 +119,19 @@
 
   /* ---------- 4. 보내기 ---------- */
   function rows() { return S.toFormRows(state.pages.map(function (e) { return e.page; }), codeMap()); }
-  function send() {
+  async function send() {
+    if(sending) return;
     if (busy) { msg('sc-send-msg','AI 처리가 끝난 후 모든 페이지를 확인하세요.','warn'); return; }
     if (!$('sc-reviewed').checked) { msg('sc-send-msg','원본과 검토 항목을 확인한 후 확인란을 선택하세요.','warn'); return; }
     var r = rows(); if (r.length < 2) { msg('sc-send-msg', '보낼 줄이 없습니다.', 'warn'); return; }
     var open = state.pages.reduce(function (n, e) { return n + (e.issues || []).length; }, 0);
-    try { localStorage.setItem(LS_SCAN, JSON.stringify({ at: new Date().toISOString(), name: '스캔본 읽은 값(' + state.pages.length + '장)', aoa: r, issues: open })); }
-    catch (e) { msg('sc-send-msg', '브라우저 저장에 실패했습니다. 엑셀로 내려받아 집계 화면에 올려 주세요.', 'warn'); return; }
+    var entry={at:new Date().toISOString(),name:'스캔본 읽은 값('+state.pages.length+'장)',aoa:r,issues:open,syncId:window.crypto ? window.crypto.randomUUID() : String(Date.now())};
+    sending=true; $('btn-sc-send').disabled=true;
+    try {
+      localStorage.setItem(LS_SCAN,JSON.stringify(entry));
+      if(window.CloudSync)await window.CloudSync.addScan({id:entry.syncId,name:entry.name,aoa:r});
+    }
+    catch (e) { sending=false; $('btn-sc-send').disabled=false; msg('sc-send-msg', '브라우저 저장에 실패했습니다. 엑셀로 내려받아 집계 화면에 올려 주세요.', 'warn'); return; }
     location.href = 'index.html#scan';
   }
   function xlsx() {

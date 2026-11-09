@@ -8,6 +8,13 @@
   var state = { files: [], res: null, kind: '', month: '', ai: null, sample: false };
   var KIND = { equip: '설비', worker: '작업자' };
 
+  function syncWorkspace() {
+    return { version: 1, files: state.files.map(function(f) {
+      if (!f.id) f.id = window.crypto.randomUUID();
+      return {id:f.id,name:f.name,sheets:f.sheets.map(function(s){return {name:s.name,type:s.type,aoa:s.aoa};})};
+    }), settings: readSettings() };
+  }
+  function changed() { if (!state.sample && window.CloudSync) window.CloudSync.changed(); }
   /* ---------- 기준 ---------- */
   var SET_KEYS = ['start', 'dayEnd', 'nightEnd', 'breakMin', 'rests', 'basis', 'target', 'separateRest'];
   function loadSettings() { try { return JSON.parse(localStorage.getItem(LS_SET) || 'null') || {}; } catch (e) { return {}; } }
@@ -45,7 +52,7 @@
   function onSettings() {
     shiftInfo();
     try { localStorage.setItem(LS_SET, JSON.stringify(readSettings())); } catch (e) { /* 저장 실패는 무시 */ }
-    if (state.files.length) compute();
+    if (state.files.length) compute(); else changed();
   }
   $('s-set').addEventListener('change', function (e) { if (e.target.matches('input,select')) onSettings(); });
   ['codes', 'codes-weld'].forEach(function (id) {
@@ -141,10 +148,11 @@
     if (state.files.length) compute(); else clearResult();
   });
   function status(h) { $('data-status').innerHTML = h; }
-  function clearResult() { state.res = null; $('s-dash').hidden = true; $('s-report').hidden = true; status(''); }
+  function clearResult() { state.res = null; $('s-dash').hidden = true; $('s-report').hidden = true; status(''); changed(); }
 
   /* ---------- 계산 ---------- */
   function compute() {
+    changed();
     var S = settings(), parts = [], counts = {};
     state.files.forEach(function (f, fi) {
       f.sheets.forEach(function (s, si) {
@@ -352,13 +360,17 @@
   fillSettings(saved);
   renderGroups();
   // (v1.3) 스캔본 읽기 화면에서 보낸 입력 양식 줄 — index.html#scan 으로 오면 파일처럼 올려 바로 집계한다
+  if (window.CloudSync) window.CloudSync.register({get: syncWorkspace, apply: function(value) {
+    state.files=value.files.map(function(f){return {id:f.id,name:f.name,sheets:f.sheets.map(function(s){return {name:s.name,type:s.type,aoa:s.aoa,det:D.detectSheet(s.aoa,s.name)};})};});state.sample=false;fillSettings(value.settings);renderFiles();
+    if(state.files.length) compute();else clearResult();
+  }});
   (function loadScan() {
     if (location.hash !== '#scan') return;
     var j = null; try { j = JSON.parse(localStorage.getItem('build-2611-11.scan') || 'null'); } catch (e) { j = null; }
     if (!j || !j.aoa) return;
     var det = D.detectSheet(j.aoa, '비가동일보');
     if (state.sample) { state.files = []; state.sample = false; }
-    state.files.push({ name: j.name || '스캔본 읽은 값', sheets: [{ name: '비가동일보', aoa: j.aoa, det: det, type: det.type }] });
+    state.files.push({ id: j.syncId || window.crypto.randomUUID(), name: j.name || '스캔본 읽은 값', sheets: [{ name: '비가동일보', aoa: j.aoa, det: det, type: det.type }] });
     renderFiles(); compute();
     status('<div class="' + (j.issues ? 'warn' : 'ok') + '">스캔본에서 읽은 ' + (j.aoa.length - 1) + '줄을 올렸습니다' + (j.issues ? ' — 스캔본 화면에서 「확인할 것」 ' + j.issues + '건이 남아 있었습니다. 집계에서 빠지거나 미분류로 센 줄이 있는지 「확인할 것」을 보세요.' : '.') + '</div>');
     localStorage.removeItem('build-2611-11.scan');
