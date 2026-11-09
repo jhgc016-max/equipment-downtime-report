@@ -29,23 +29,30 @@
   }
   function renderThumbs() {
     $('sc-thumbs').innerHTML = state.files.map(function (f, i) {
-      return '<figure class="thumb">' + (/pdf/i.test(f.mime) ? '<div class="pdfbox">PDF</div>' : '<img src="' + (f.url || '') + '" alt="' + esc(f.name) + '">') + '<figcaption>' + esc(f.name) + ' · ' + esc(f.error || ({loading:'파일 읽는 중',pending:'대기',reading:'무료 읽기 중',done:'완료',failed:'실패'})[f.status]) + (f.status === 'failed' && f.base64 ? ' <button type="button" data-retry="' + i + '">이 파일 다시 처리</button>' : '') + ' <button class="x" data-rm="' + i + '" type="button">빼기</button></figcaption></figure>';
+      return '<figure class="thumb">' + (/pdf/i.test(f.mime) ? '<div class="pdfbox">PDF</div>' : '<img src="' + (f.url || '') + '" alt="' + esc(f.name) + '">') + '<figcaption>' + esc(f.name) + ' · ' + esc(f.error || ({loading:'파일 읽는 중',pending:'대기',reading:'AI 처리 중',done:'완료',failed:'실패'})[f.status]) + (f.status === 'failed' && f.base64 ? ' <button type="button" data-retry="' + i + '">이 파일 다시 처리</button>' : '') + ' <button class="x" data-rm="' + i + '" type="button">빼기</button></figcaption></figure>';
     }).join('');
     syncRun();
   }
-  function syncRun() { $('btn-sc-run').disabled = busy || !(state.files.some(function(f){return f.status==='pending';}) ); }
+  function syncRun() { $('btn-sc-run').disabled = busy || !(state.files.some(function(f){return f.status==='pending';}) && $('sc-agree').checked && $('sc-key').value.trim()); }
   async function runFile(f) {
     f.status='reading'; f.error='';renderThumbs();
     try {
-      var j=await window.ScanLocal.read(f,$('sc-form').value,function(status){msg('sc-msg',esc(f.name)+' · '+esc(status),'note');});
+      var api=window.ScanAPI;
+      var response=await fetch('https://api.openai.com/v1/responses',{
+        method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+$('sc-key').value.trim()},
+        body:JSON.stringify(api.buildRequest(f,$('sc-form').value)),signal:AbortSignal.timeout(195000),credentials:'omit',redirect:'error'
+      });
+      if(!response.ok) { await response.body?.cancel(); throw api.upstreamError(response.status); }
+      var payload;try {payload=await response.json();}catch(e){throw new Error('OpenAI 응답을 읽을 수 없습니다. 이 파일만 다시 처리하세요.');}
+      var j=api.convert(payload);
       j.pages.forEach(function(p){state.pages.push({page:p,src:f.name+' · '+p.sourcePage+'쪽',fileId:f.id});});
       state.pages.sort(function(a,b){return (a.fileId || 0)-(b.fileId || 0) || (a.page.sourcePage || 0)-(b.page.sourcePage || 0);});
       f.status='done'; $('sc-reviewed').checked=false;renderPages();
-    } catch(e) {f.status='failed';f.error=e.message || '무료 읽기에 실패했습니다. 파일을 확인하고 다시 처리하세요.';}
+    } catch(e) {f.status='failed';f.error=e.name==='TypeError'?'OpenAI 연결 실패: 인터넷 연결 또는 브라우저의 외부 요청 차단을 확인하세요.':e.message;}
     renderThumbs();
   }
   async function run(only) {
-    if(busy) return;
+    if(busy || !$('sc-agree').checked || !$('sc-key').value.trim()) return;
     busy=true;syncRun();
     var files=only?[only]:state.files.filter(function(f){return f.status==='pending';});
     for(var f of files) {msg('sc-msg',esc(f.name)+' 읽는 중…','note');await runFile(f);}
@@ -68,7 +75,7 @@
     $('sc-pages').innerHTML = state.pages.map(function (e, pi) {
       var p = e.page, F = S.FORMS[p.form], issues = S.validate(p, lg); e.issues = issues;
       var img = state.files.filter(function(f) {return f.id === e.fileId;})[0];
-      var h = '<div class="page" data-p="' + pi + '"><div class="page-h"><h3>' + (pi + 1) + '. ' + esc(F.name) + '</h3><span class="sub">' + esc(e.src) + '</span>' + (p.confidence ? '<span class="tag' + (p.confidence === 'low' ? ' bad-t' : '') + '">읽기 확신 ' + esc(p.confidence) + '</span>' : '') + '<button class="x" data-del-page="' + pi + '" type="button">이 장 빼기</button></div>';
+      var h = '<div class="page" data-p="' + pi + '"><div class="page-h"><h3>' + (pi + 1) + '. ' + esc(F.name) + '</h3><span class="sub">' + esc(e.src) + '</span>' + (p.confidence ? '<span class="tag' + (p.confidence === 'low' ? ' bad-t' : '') + '">AI 확신 ' + esc(p.confidence) + '</span>' : '') + '<button class="x" data-del-page="' + pi + '" type="button">이 장 빼기</button></div>';
       h += '<div class="page-body">' + (img ? '<div class="orig">' + (/pdf/i.test(img.mime) ? '<iframe title="PDF 원본" style="width:100%;height:650px" src="' + img.url + '#page=' + p.sourcePage + '"></iframe><a target="_blank" rel="noopener" href="' + img.url + '#page=' + p.sourcePage + '">원본 페이지 열기</a>' : '<img src="' + img.url + '" alt="원본">') + '</div>' : '') + '<div class="vals">';
       h += '<div class="fgrid">' + [['equipment', '설비명 · 트랙'], ['worker', '작업자'], ['date', '작업일자'], ['start', '시작시간'], ['end', '종료시간']].map(function (f) {
         return '<label>' + f[1] + '<input type="text" data-pf="' + f[0] + '" value="' + esc(p[f[0]]) + '" placeholder="' + (f[0] === 'date' ? '2026-11-03' : f[0] === 'start' || f[0] === 'end' ? '08:00' : '') + '"></label>';
@@ -81,8 +88,7 @@
         return '<tr><td>' + w.no + '</td><td><input class="tm" data-wk="' + wi + '" data-k="start" value="' + esc(w.start) + '"></td><td><input class="tm" data-wk="' + wi + '" data-k="end" value="' + esc(w.end) + '"></td><td><input class="wide" data-wk="' + wi + '" data-k="job" value="' + esc([w.model, w.part, w.job].filter(Boolean).join(' · ')) + '"></td><td><input class="code" data-wk="' + wi + '" data-k="qty" value="' + esc(w.qty) + '"></td><td><input data-wk="' + wi + '" data-k="note" value="' + esc(w.note) + '"></td><td><button class="x" data-wk-del="' + wi + '" type="button">빼기</button></td></tr>';
       }).join('') + '</tbody></table></div><div class="btnrow"><button class="btn sm" data-wk-add="' + pi + '" type="button">작업 줄 더하기</button></div></details>';
       if (p.checks.length) h += '<p class="sub">장비 점검: ' + p.checks.map(function (c) { return esc(c.item) + ' ' + (c.status || '(미표시)'); }).join(' · ') + '</p>';
-      if (p.sourceText != null) h += '<details open><summary>' + esc(p.method || '무료 인식') + ' 텍스트 초안 (수정 가능)</summary><p class="sub">손글씨·표는 틀릴 수 있습니다. 시간은 08:00 09:00 형식으로 같은 줄에 적고, 비가동에는 A~H 코드를 적어 주세요. 다시 채우기는 현재 표의 수정 값을 덮어씁니다.</p><textarea data-source-text="1" rows="10" style="width:100%">' + esc(p.sourceText) + '</textarea><button class="btn sm" type="button" data-parse-text="' + pi + '">수정한 텍스트로 표 다시 채우기</button></details>';
-      if (p.raw) h += '<details><summary>추출 원문 (수정 전)</summary><pre style="white-space:pre-wrap">' + esc(JSON.stringify(p.raw,null,2)) + '</pre></details>';
+      if (p.raw) h += '<details><summary>AI가 읽은 원문 (수정 전)</summary><pre style="white-space:pre-wrap">' + esc(JSON.stringify(p.raw,null,2)) + '</pre></details>';
       if (p.special) h += '<p class="sub">특이사항: ' + esc(p.special) + '</p>';
       h += issues.length ? '<div class="warn"><b>확인할 것 ' + issues.length + '건</b><ul>' + issues.map(function (x) { return '<li>' + esc(x.where) + ' — ' + esc(x.what) + '</li>'; }).join('') + '</ul></div>' : '<div class="ok">확인할 것이 없습니다.</div>';
       h += '</div></div></div>';
@@ -99,7 +105,6 @@
   function pageAt(el) { var box = el.closest('.page'); return box ? state.pages[+box.dataset.p] : null; }
   function onEdit(e) {
     var t = e.target, pe = pageAt(t); if (!pe) return; var p = pe.page;
-    if (t.dataset.sourceText) { p.sourceText=t.value; $('sc-reviewed').checked=false; return; }
     if (t.dataset.pf) { p[t.dataset.pf] = t.dataset.pf === 'form' ? t.value : (t.dataset.pf === 'date' ? (S.date(t.value) || t.value.trim()) : (t.dataset.pf === 'start' || t.dataset.pf === 'end') ? (S.time(t.value) || t.value.trim()) : t.value.trim()); }
     else if (t.dataset.dt != null) { var d = p.downtime[+t.dataset.dt], k = t.dataset.k; d[k] = k === 'code' ? S.code(t.value) : (k === 'start' || k === 'end') ? (S.time(t.value) || t.value.trim()) : t.value.trim(); if (k === 'code') d.rawCode = t.value.trim(); }
     else if (t.dataset.wk != null) { var w = p.work[+t.dataset.wk], kk = t.dataset.k; if (kk === 'job') { w.model = ''; w.part = ''; w.job = t.value.trim(); } else w[kk] = (kk === 'start' || kk === 'end') ? (S.time(t.value) || t.value.trim()) : t.value.trim(); }
@@ -110,7 +115,6 @@
     var t = e.target;
     if (t.dataset.delPage != null) { state.pages.splice(+t.dataset.delPage, 1); renderPages(); return; }
     var pe = pageAt(t); if (!pe) return; var p = pe.page;
-    if (t.dataset.parseText != null) { var parsed=window.ScanLocal.parse(p.sourceText,p.form,p.sourcePage,p.method);parsed.raw=p.raw;pe.page=parsed;renderPages();return; }
     if (t.dataset.dtDel != null) p.downtime.splice(+t.dataset.dtDel, 1);
     else if (t.dataset.dtAdd != null) p.downtime.push({ no: p.downtime.length + 1, code: '', rawCode: '', start: '', end: '', note: '' });
     else if (t.dataset.wkDel != null) p.work.splice(+t.dataset.wkDel, 1);
@@ -122,7 +126,7 @@
   /* ---------- 4. 보내기 ---------- */
   function rows() { return S.toFormRows(state.pages.map(function (e) { return e.page; }), codeMap()); }
   function send() {
-    if (busy) { msg('sc-send-msg','읽기가 끝난 후 모든 페이지를 확인하세요.','warn'); return; }
+    if (busy) { msg('sc-send-msg','AI 처리가 끝난 후 모든 페이지를 확인하세요.','warn'); return; }
     if (!$('sc-reviewed').checked) { msg('sc-send-msg','원본과 검토 항목을 확인한 후 확인란을 선택하세요.','warn'); return; }
     var r = rows(); if (r.length < 2) { msg('sc-send-msg', '보낼 줄이 없습니다.', 'warn'); return; }
     var open = state.pages.reduce(function (n, e) { return n + (e.issues || []).length; }, 0);
@@ -131,7 +135,7 @@
     location.href = 'index.html#scan';
   }
   function xlsx() {
-    if (busy) { msg('sc-send-msg','읽기가 끝난 후 모든 페이지를 확인하세요.','warn'); return; }
+    if (busy) { msg('sc-send-msg','AI 처리가 끝난 후 모든 페이지를 확인하세요.','warn'); return; }
     if (!$('sc-reviewed').checked) { msg('sc-send-msg','원본 확인란을 선택한 후 내려받으세요.','warn'); return; }
     var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows()), '비가동일보');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(D.legendRows(settings())), '범례');
@@ -154,6 +158,8 @@
   $('btn-sc-manual-w').addEventListener('click', function () { state.pages.push({ page: S.blankPage('weld'), src: '손으로 입력' }); renderPages(); });
   $('btn-sc-clear').addEventListener('click', function () { if(busy) return; state.files.forEach(function(f){URL.revokeObjectURL(f.url);});state.files = []; state.pages = []; renderThumbs(); renderPages(); msg('sc-msg', ''); });
   try {localStorage.removeItem(LS_AI);} catch(e) {}
+  $('sc-forget').addEventListener('click', function () { localStorage.removeItem(LS_AI); $('sc-key').value = ''; syncRun(); });
+  ['input', 'change'].forEach(function (t) { $('sc-key').addEventListener(t, syncRun); $('sc-agree').addEventListener(t, syncRun); });
   $('btn-sc-run').addEventListener('click', function(){run();});
   $('sc-pages').addEventListener('change', onEdit);
   $('sc-pages').addEventListener('click', onClick);
