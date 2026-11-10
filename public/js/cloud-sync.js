@@ -3,6 +3,8 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const config = window.DowntimeSyncConfig || {};
+  const localReader = document.body?.dataset?.localReader === 'true';
+  let localSaving = false;
   let client, store, adapter, applying = false, connected = false, timer, polling;
   function say(text) { $('sync-status').textContent = text; }
   function state(s) {
@@ -56,6 +58,34 @@
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
     a.download = name + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
+  async function readShared() {
+    const {data,error}=await client.from('downtime_shared_workspace').select('revision,payload,updated_at').eq('id','public').maybeSingle();
+    if(error)throw new Error('클라우드 연결에 실패했습니다. 인터넷 연결과 동기화 설정을 확인하세요.');
+    return data;
+  }
+  async function refreshReader() {
+    const cloud=await readShared();
+    if(cloud)localStorage.setItem('build-2611-11.settings',JSON.stringify(cloud.payload.settings));
+    say('클라우드 연결됨');
+  }
+  async function sendReaderScan(scan) {
+    if(!client)throw new Error('클라우드 연결 준비 중입니다. 잠시 후 다시 시도하세요.');
+    if(localSaving)throw new Error('동기화가 진행 중입니다.');
+    localSaving=true;
+    try {
+      const cloud=await readShared();
+      const plan=window.DowntimeSync.prepareScan(cloud?.payload||{version:1,files:[],settings:{}},scan);
+      if(plan.alreadySaved){say('이미 동기화된 자료입니다.');return true;}
+      if(plan.duplicates.length){
+        const details=plan.duplicates.map(d=>d.date+' · '+d.rows+'행 · '+d.files.join(', ')).join('\n');
+        if(!window.confirm('같은 날짜의 기존 자료가 있습니다.\n\n'+details+'\n\n해당 날짜의 기존 행을 삭제하고 새 스캔본으로 교체할까요? 다른 날짜는 유지됩니다. 취소하면 전송하지 않습니다.'))return false;
+      }
+      const {data,error}=await client.rpc('save_shared_downtime_workspace',{expected_revision:cloud?.revision||0,workspace:plan.payload});
+      if(error)throw new Error('동기화에 실패했습니다. 읽은 값은 화면에 남아 있습니다. 다시 시도하세요.');
+      if(!data?.ok)throw new Error('다른 PC에서 자료를 변경했습니다. 다시 동기화를 눌러 최신 자료를 확인하세요.');
+      say('클라우드 동기화 완료');return true;
+    } finally {localSaving=false;}
+  }
   async function init() {
     const panel = document.createElement('section'); panel.className = 'card'; panel.id = 'cloud-sync';
     panel.innerHTML = `<h2 style="margin-top:0">공개 자료 자동 동기화</h2>
@@ -64,6 +94,7 @@
       <div class="btnrow"><button class="btn" id="sync-now" type="button" disabled>지금 동기화</button></div>
       <div class="warn" id="sync-conflict" hidden><b>어느 자료를 사용할까요?</b><p>자동으로 덮어쓰지 않았습니다. 교체 전 이 PC 자료와 클라우드 자료를 내려받아 비교할 수 있습니다.</p><div class="btnrow"><button class="btn" id="sync-local-copy" type="button">이 PC 백업(JSON)</button><button class="btn" id="sync-cloud-copy" type="button">클라우드 백업(JSON)</button><button class="btn" id="sync-use-cloud" type="button">클라우드 자료 사용</button><button class="btn" id="sync-use-local" type="button">이 PC 자료로 저장</button></div></div>`;
     document.querySelector('main .wrap').prepend(panel);
+    if(localReader){panel.className='card reader-sync';panel.innerHTML='<p><span id="sync-status" role="status">클라우드 연결 중…</span></p><button class="btn" id="sync-now" type="button" disabled>연결 새로고침</button>';}
     $('sync-now').disabled = true;
     if (!config.url || !config.publishableKey) { say('관리자가 Supabase 프로젝트를 연결하면 사용할 수 있습니다. 현재는 이 PC에서만 작업합니다.'); return; }
     try {
@@ -75,6 +106,11 @@
       }
       const lib = await sdk();
       client = lib.createClient(config.url, config.publishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+      if(localReader){
+        $('sync-now').disabled=false;
+        $('sync-now').onclick=()=>refreshReader().catch(e=>say(e.message));
+        await refreshReader();return;
+      }
       $('sync-now').onclick = () => store?.poll();
       $('sync-use-cloud').onclick = async () => { if (window.confirm('이 PC 화면을 클라우드 자료로 교체할까요?')) await store.resolve('cloud'); };
       $('sync-use-local').onclick = async () => { if (window.confirm('현재 이 PC 자료로 클라우드를 교체할까요? 다른 PC에도 반영됩니다.')) await store.resolve('local'); };
@@ -92,6 +128,7 @@
       try { store.change(current()); clearTimeout(timer); timer = setTimeout(() => store.flush(), 1000); } catch (e) { say(e.message); }
     },
     async addScan(scan) {
+      if(localReader)return sendReaderScan(scan);
       if (!connected) return false;
       const value = store.current();
       if (!value.files.some(f => f.id === scan.id)) value.files.push({ id: scan.id, name: scan.name, sheets: [{ name: '비가동일보', type: 'form', aoa: scan.aoa }] });

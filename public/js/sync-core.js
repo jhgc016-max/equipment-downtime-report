@@ -10,6 +10,33 @@ function snapshot(value){
  const result={version:1,files,settings};if(new TextEncoder().encode(JSON.stringify(result)).length>MAX)throw new Error('동기화 데이터가 4MB를 넘습니다. 파일을 나누거나 이전 자료를 내려받아 보관하세요.');return result;
 }
 function same(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+function scanDate(value){
+ if(typeof value==='number'&&Number.isFinite(value)&&value>0&&value<2958466)return new Date(Date.UTC(1899,11,30)+Math.floor(value)*86400000).toISOString().slice(0,10);
+ const s=String(value??'').trim(),m=s.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})(?:\D.*)?$/)||s.match(/^(\d{4})(\d{2})(\d{2})$/);
+ if(!m)return null;const y=+m[1],mo=+m[2],d=+m[3];if(y<1900||mo<1||mo>12||d<1||d>new Date(Date.UTC(y,mo,0)).getUTCDate())return null;
+ return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+}
+function dateHeader(aoa){for(let row=0;row<Math.min(30,aoa.length);row++){const col=aoa[row].findIndex(v=>/^(날짜|일자|작업일|작업일자)$/.test(String(v??'').replace(/\s/g,'')));if(col>=0)return {row,col};}return null;}
+function prepareScan(workspace,scan){
+ const value=snapshot(workspace),head=dateHeader(scan.aoa||[]);
+ if(!head||scan.aoa.length<=head.row+1)throw new Error('보낼 작업일자와 데이터가 없습니다.');
+ const dates=new Set();for(const row of scan.aoa.slice(head.row+1)){const date=scanDate(row[head.col]);if(!date)throw new Error('모든 행의 작업일자를 확인하세요.');dates.add(date);}
+ if(value.files.some(f=>f.id===scan.id))return {payload:value,duplicates:[],alreadySaved:true};
+ const duplicates=new Map();
+ value.files=value.files.map(file=>({...file,sheets:file.sheets.map(sheet=>{
+   if(sheet.type!=='form')return sheet;
+   const h=dateHeader(sheet.aoa);if(!h)return sheet;
+   const kept=sheet.aoa.slice(0,h.row+1);let removed=0,lastDate=null;
+   for(const row of sheet.aoa.slice(h.row+1)){
+     if(String(row[h.col]??'').trim())lastDate=scanDate(row[h.col]);
+     const date=lastDate;
+     if(dates.has(date)){removed++;const item=duplicates.get(date)||{date,rows:0,files:new Set()};item.rows++;item.files.add(file.name);duplicates.set(date,item);}else kept.push(row);
+   }
+   return removed&&kept.length===h.row+1?null:{...sheet,aoa:kept};
+ }).filter(Boolean)})).filter(f=>f.sheets.length);
+ value.files.push({id:scan.id,name:scan.name,sheets:[{name:'비가동일보',type:'form',aoa:scan.aoa}]});
+ return {payload:snapshot(value),duplicates:[...duplicates.values()].map(d=>({...d,files:[...d.files]})).sort((a,b)=>a.date.localeCompare(b.date)),alreadySaved:false};
+}
 class Store{
  constructor({storage,remote,apply,status}){Object.assign(this,{storage,remote,apply,status});this.user=null;this.revision=0;this.dirty=false;this.payload=null;this.conflict=null;this.busy=false;this.epoch=0;this.changeId=0;}
  key(){return 'equipment.sync.v1:'+this.user;}
@@ -44,5 +71,5 @@ class Store{
  async resolve(choice){if(!this.conflict||this.busy)return;const conflict=this.conflict;if(choice==='cloud'){if(!conflict.payload)throw new Error('클라우드 자료가 없습니다.');this.payload=snapshot(conflict.payload);this.revision=conflict.revision;this.dirty=false;this.conflict=null;this.persist();this.apply(this.current());this.state('synced','클라우드 자료를 사용합니다.');}else if(choice==='local'){this.revision=conflict.revision;this.conflict=null;this.dirty=true;this.persist();await this.flush();}else throw new Error('자료를 선택하세요.');}
  disconnect(){this.epoch++;this.user=null;this.busy=false;this.payload=null;this.conflict=null;this.dirty=false;this.state('signedout','동기화 로그아웃됨 · 화면의 자료는 이 PC에 남습니다.');}
 }
-return {Store,snapshot,same};
+return {Store,snapshot,same,scanDate,prepareScan};
 });

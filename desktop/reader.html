@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PDF 읽기 · 동기화</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/app.css"><link rel="stylesheet" href="css/reader.css"></head>
+<body data-local-reader="true"><header class="reader-header"><div class="wrap"><h1>PDF 읽기 · 동기화</h1></div></header><main><div class="wrap">
+
+<section class="card" id="s-files">
+  <label class="drop" id="sc-drop">
+    <input type="file" id="sc-file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
+    <b>스캔본을 끌어다 놓거나 눌러서 고르세요(여러 장 가능)</b>
+
+  </label>
+  <div id="sc-thumbs" class="thumbs"></div>
+  <div class="btnrow">
+    <button class="btn" id="btn-sc-clear" type="button">모두 비우기</button>
+  </div>
+</section>
+
+<section class="card" id="s-ai">
+  <div class="ctrl">
+    <label>양식 <select id="sc-form"><option value="">자동(AI 가 판단)</option><option value="mach">생산작업일보(가공)</option><option value="weld">용접 ROBOT 가동일보</option></select></label>
+  </div>
+  <div id="sc-login" class="box">
+
+    <p id="sc-login-status" role="status">ChatGPT 연결 확인 중…</p>
+    <div id="sc-login-controls" hidden>
+    <div class="btnrow"><button class="btn" id="btn-chatgpt-in" type="button">ChatGPT로 로그인</button><button class="btn" id="btn-chatgpt-out" type="button">로그아웃</button><button class="btn" id="btn-chatgpt-cancel" type="button" hidden>로그인 취소</button><button class="btn" id="btn-chatgpt-refresh" type="button">연결·모델 새로고침</button><a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer">구독 사용량 관리</a></div>
+    <label>사용할 모델 <select id="sc-chatgpt-model"><option value="">로그인 후 선택하세요</option></select></label>
+    </div>
+  </div>
+  <div class="warn">
+
+    <label class="chk"><input type="checkbox" id="sc-agree"> PDF·사진을 OpenAI로 전송하는 데 동의합니다</label>
+  </div>
+  <div class="btnrow"><button class="btn primary" id="btn-sc-run" type="button" disabled>올린 스캔본 읽기</button></div>
+  <div id="sc-msg"></div>
+</section>
+
+<section class="card" id="s-pages" hidden>
+  <span id="sc-count" class="tag"></span><div id="sc-pages"></div>
+</section>
+
+<section class="card" id="s-send" hidden>
+  <div id="sc-preview"></div><label class="chk"><input type="checkbox" id="sc-reviewed"> 모든 페이지의 원문·읽은 값·검토 항목을 확인했습니다. 남은 빈칸과 오류도 확인했습니다.</label>
+  <div class="btnrow">
+    <button class="btn primary" id="btn-sc-send" type="button">클라우드로 동기화</button>
+  </div>
+  <div id="sc-send-msg"></div>
+</section>
+
+</div></main>
+<script src="js/downtime.js"></script><script src="js/sync-config.js"></script><script src="js/sync-core.js"></script><script src="js/cloud-sync.js"></script><script src="js/scanread.js"></script><script src="js/scan-login.js"></script><script src="js/scan.js"></script></body></html>

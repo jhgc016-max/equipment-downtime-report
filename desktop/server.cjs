@@ -57,7 +57,10 @@ function createLocalServer(client,{port=0}={}){
    }catch(e){return send(e instanceof API.ScanError?e.status:502,{error:e instanceof API.ScanError?e.message:errorMessage(e)});}finally{active=false;}
   }
   if(!['GET','HEAD'].includes(req.method))return send(405,{error:'지원하지 않는 요청입니다.'});
-  try{const pathname=decodeURIComponent(url.pathname);const target=path.resolve(root,'.'+(pathname==='/'?'/scan.html':pathname));if(!target.startsWith(root+path.sep))return send(404,{error:'파일이 없습니다.'});const content=await fs.readFile(target);const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};res.writeHead(200,{...headers,'Content-Type':types[path.extname(target)]||'application/octet-stream'});res.end(req.method==='HEAD'?undefined:content);}catch{send(404,{error:'파일이 없습니다.'});}
+  try{const pathname=decodeURIComponent(url.pathname);const reader=pathname==='/'||pathname==='/scan.html';
+   const assets=new Set(['/favicon.svg','/css/style.css','/css/app.css','/css/reader.css','/js/downtime.js','/js/sync-config.js','/js/sync-core.js','/js/cloud-sync.js','/js/scanread.js','/js/scan-login.js','/js/scan.js']);
+   if(!reader&&!assets.has(pathname))return send(404,{error:'로컬 프로그램은 PDF 읽기와 동기화만 지원합니다.'});
+   const target=reader?path.join(__dirname,'reader.html'):path.resolve(root,'.'+pathname);const content=await fs.readFile(target);const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};res.writeHead(200,{...headers,'Content-Type':types[path.extname(target)]||'application/octet-stream'});res.end(req.method==='HEAD'?undefined:content);}catch{send(404,{error:'파일이 없습니다.'});}
  });
  server.requestTimeout=650000;server.headersTimeout=15000;
  return {server,async start(){await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolve);});origin='http://127.0.0.1:'+server.address().port;return origin+'/open/'+launch;}};

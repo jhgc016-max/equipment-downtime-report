@@ -6,7 +6,7 @@
 
 ## ChatGPT 계정으로 사용
 
-공개 사이트의 **PC 실행 프로그램 다운로드 (ZIP)** 버튼 → ZIP **모두 압축 풀기** → `equipment-downtime-report-main/start-chatgpt.cmd` 실행 순서로 시작합니다. Node.js 22.12 이상을 먼저 설치하고 풀린 폴더 전체를 유지하세요. Windows에서 `start-chatgpt.cmd`를 실행한 뒤 **ChatGPT로 로그인**하면 API 키 없이 계정의 승인된 구독 사용 권한으로 파일 읽기를 요청할 수 있습니다. Node.js 22.12 이상과 인터넷 연결이 필요합니다. 계정별 PDF·이미지 지원은 실제 로그인 후 확인해야 합니다. 설치·보안·라이선스·지원 범위는 [CHATGPT_LOGIN.md](CHATGPT_LOGIN.md)를 확인하세요.
+공개 사이트의 **스캔본 읽기 다운로드** 메뉴 → **PC 실행 프로그램 다운로드 (ZIP)** 버튼 → ZIP **모두 압축 풀기** → `equipment-downtime-report-main/start-chatgpt.cmd` 실행 순서로 시작합니다. Node.js 22.12 이상을 먼저 설치하고 풀린 폴더 전체를 유지하세요. Windows에서 `start-chatgpt.cmd`를 실행한 뒤 **ChatGPT로 로그인**하면 API 키 없이 계정의 승인된 구독 사용 권한으로 파일 읽기를 요청할 수 있습니다. Node.js 22.12 이상과 인터넷 연결이 필요합니다. 계정별 PDF·이미지 지원은 실제 로그인 후 확인해야 합니다. 설치·보안·라이선스·지원 범위는 [CHATGPT_LOGIN.md](CHATGPT_LOGIN.md)를 확인하세요.
 
 ## 자동 동기화
 

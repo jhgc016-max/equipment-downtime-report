@@ -12,6 +12,8 @@ test('local login is authenticated, consented, scoped and preserves completed pa
  const call=(route,body,extra={})=>fetch(origin+'/api/chatgpt/'+route,{method:body===undefined?'GET':'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json',...extra},body:body===undefined?undefined:JSON.stringify(body)});
  try{
   assert.equal((await fetch(origin+'/scan.html')).status,401);assert.equal((await fetch(launch,{redirect:'manual'})).status,401);
+  const reader=await fetch(origin+'/scan.html',{headers:{Cookie:cookie}});const readerHtml=await reader.text();assert.equal(reader.status,200);assert.ok(readerHtml.includes('data-local-reader="true"'));assert.ok(!readerHtml.includes('data-site-version'));assert.ok(!readerHtml.includes('topnav'));
+  for(const route of ['/index.html','/guide.html','/plan.html','/js/app.js'])assert.equal((await fetch(origin+route,{headers:{Cookie:cookie}})).status,404);
   assert.equal((await call('sign-in',{}, {Origin:'https://evil.invalid'})).status,403);const badHost=await new Promise((resolve,reject)=>{const request=require('node:http').get(origin+'/api/chatgpt/session',{headers:{Host:'evil.invalid',Cookie:cookie}},response=>{response.resume();resolve(response.statusCode);});request.on('error',reject);});assert.equal(badHost,403);
   assert.equal((await call('scan',{file,model:'gpt-6.1-sol',consent:true})).status,403);assert.equal(calls,0);
   const login=await call('sign-in',{});assert.equal(login.status,200);const s=await login.json();assert.equal(s.sharing,true);assert.ok(!JSON.stringify(s).includes('must-never'));
