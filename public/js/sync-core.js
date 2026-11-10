@@ -25,7 +25,7 @@ class Store{
   try{const cloud=await this.remote.read(user);if(epoch!==this.epoch)return;
    if(saved?.needsChoice||localExtras){this.conflict=cloud||{revision:0,payload:{version:1,files:[],settings:{}}};this.persist();this.state('conflict','미해결 자료 선택이 있습니다. 사용할 자료를 선택하세요.');return;}
    if(this.dirty){if((cloud?.revision||0)!==this.revision){this.conflict=cloud||{revision:0,payload:{version:1,files:[],settings:{}}};this.persist();this.state('conflict','다른 PC의 변경과 이 PC의 미저장 자료가 충돌합니다. 사용할 자료를 선택하세요.');return;}this.apply(this.current());await this.flush();return;}
-   if(!saved&&(local.files.length||Object.keys(local.settings).length)){this.conflict=cloud||{revision:0,payload:{version:1,files:[],settings:{}}};this.dirty=true;this.persist();this.state('conflict','처음 연결한 계정입니다. 이 PC 자료를 올릴지 클라우드 자료를 사용할지 선택하세요.');return;}
+   if(!saved&&(local.files.length||Object.keys(local.settings).length)){this.conflict=cloud||{revision:0,payload:{version:1,files:[],settings:{}}};this.dirty=true;this.persist();this.state('conflict','처음 연결한 작업 공간입니다. 이 PC 자료를 올릴지 클라우드 자료를 사용할지 선택하세요.');return;}
    if(cloud){this.revision=cloud.revision;this.payload=snapshot(cloud.payload);this.persist();this.apply(this.current());this.state('synced','동기화 완료');}
    else{this.dirty=true;this.persist();this.apply(this.current());await this.flush();}
   }catch{if(epoch===this.epoch){if(!saved)this.dirty=true;this.persist();this.state('offline','연결 실패. 이 PC에 보관하며 연결 후 다시 동기화합니다.');}}

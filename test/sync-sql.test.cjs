@@ -16,3 +16,28 @@ test('PostgreSQL RLS isolates accounts and the RPC enforces atomic revisions',as
  await db.exec('reset role');await db.exec('set role anon');await assert.rejects(()=>db.query('select public.save_downtime_workspace(0,$1::jsonb)',[JSON.stringify({version:1,files:[],settings:{}})]));
  }finally{await db.close();}
 });
+
+test('public workspace supports unauthenticated cross-PC sync while private workspaces remain isolated',async()=>{
+ const {PGlite}=await import('@electric-sql/pglite');const db=new PGlite();
+ try{
+ await db.exec(`create schema auth;create table auth.users(id uuid primary key);create role anon;create role authenticated;create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth,public to authenticated,anon;`);
+ await db.exec(fs.readFileSync(require.resolve('../supabase/setup.sql'),'utf8'));
+ const migration=fs.readFileSync(require.resolve('../supabase/public-sync.sql'),'utf8');
+ await db.exec(migration);await db.exec(migration);
+ const payload={version:1,files:[],settings:{target:85}};
+ const save=async(rev,value=payload)=>(await db.query('select public.save_shared_downtime_workspace($1,$2::jsonb) as result',[rev,JSON.stringify(value)])).rows[0].result;
+ await db.exec('set role anon');
+ assert.equal((await save(0)).revision,1);
+ assert.equal((await save(0)).ok,false);
+ assert.equal((await db.query('select * from public.downtime_shared_workspace')).rows.length,1);
+ for(const sql of ["update public.downtime_shared_workspace set revision=99","delete from public.downtime_shared_workspace","select * from public.downtime_workspaces"]){await assert.rejects(()=>db.exec(sql));}
+ await assert.rejects(()=>save(1,{...payload,token:'forbidden'}));
+ await assert.rejects(()=>save(1,{...payload,files:{}}));
+ await assert.rejects(()=>save(1,{...payload,settings:{data:'x'.repeat(4194304)}}));
+ await db.exec('reset role;set role authenticated');
+ assert.equal((await save(1,{...payload,settings:{target:90}})).revision,2);
+ await db.exec('reset role;set role anon');
+ assert.equal((await db.query('select payload from public.downtime_shared_workspace')).rows[0].payload.settings.target,90);
+ assert.equal((await save(1)).ok,false);
+ }finally{await db.close();}
+});
