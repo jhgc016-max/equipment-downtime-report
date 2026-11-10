@@ -2,9 +2,10 @@
   "name": "equipment-downtime-report",
   "private": true,
   "scripts": {
+    "preview": "node scripts/preview.cjs",
     "start": "npm run start:login",
     "test": "node --test test/*.test.cjs",
-    "check": "node --check public/js/scan.js && node --check public/js/scanread.js && node --check public/js/app.js && node --check public/js/downtime.js && node --check desktop/extraction.cjs && node --check desktop/server.cjs && node --check desktop/windows-security.cjs && node --check public/js/scan-login.js && node --check public/js/sync-core.js && node --check public/js/cloud-sync.js",
+    "check": "node --check public/js/operation-core.js && node --check public/js/operation.js && node --check public/js/scan.js && node --check public/js/scanread.js && node --check public/js/app.js && node --check public/js/downtime.js && node --check desktop/extraction.cjs && node --check desktop/server.cjs && node --check desktop/windows-security.cjs && node --check public/js/scan-login.js && node --check public/js/sync-core.js && node --check public/js/cloud-sync.js",
     "build:login": "npm run build --prefix vendor/siwc-local",
     "start:login": "npm run build:login && node desktop/server.cjs",
     "test:sdk": "node --test vendor/siwc-local/test/*.test.mjs",

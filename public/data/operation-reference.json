@@ -1,0 +1,671 @@
+{
+  "version": 1,
+  "source": "제공된 운영 화면 캡처 · 2026-11-10",
+  "coverage": "캡처에서 확인된 값만 수록했습니다. 설비 집계는 11월 기준이며 주야간은 원본 표시값(계획 구분)입니다. 화면의 반올림 값을 합산하므로 원본 상단 수치와 소수점 차이가 있습니다. 미제공 기간은 확인 가능한 자료만 집계합니다. 일별 원시 설비 자료는 미제공입니다.",
+  "equipmentPeriod": {
+    "start": "2026-11-01",
+    "end": "2026-11-30"
+  },
+  "equipment": [
+    {
+      "name": "MCT 호리젠탈",
+      "process": "mach",
+      "plan": 76.3,
+      "down": 3,
+      "run": 73.3,
+      "day": 35.7,
+      "night": 40.7
+    },
+    {
+      "name": "150NC",
+      "process": "mach",
+      "plan": 35.7,
+      "down": 2,
+      "run": 33.7,
+      "day": 35.7,
+      "night": 0
+    },
+    {
+      "name": "130 2호기",
+      "process": "mach",
+      "plan": 38.2,
+      "down": 1,
+      "run": 37.2,
+      "day": 38.2,
+      "night": 0
+    },
+    {
+      "name": "135 NC",
+      "process": "mach",
+      "plan": 76.3,
+      "down": 0.5,
+      "run": 75.8,
+      "day": 35.7,
+      "night": 40.7
+    },
+    {
+      "name": "110NC",
+      "process": "mach",
+      "plan": 38.2,
+      "down": 0,
+      "run": 38.2,
+      "day": 38.2,
+      "night": 0
+    },
+    {
+      "name": "110 2공장",
+      "process": "mach",
+      "plan": null,
+      "down": null,
+      "run": null,
+      "day": null,
+      "night": null
+    },
+    {
+      "name": "130 3호기",
+      "process": "mach",
+      "plan": 30.7,
+      "down": 0,
+      "run": 30.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "130 1호기",
+      "process": "mach",
+      "plan": 38.2,
+      "down": 0,
+      "run": 38.2,
+      "day": 38.2,
+      "night": 0
+    },
+    {
+      "name": "130 2공장",
+      "process": "mach",
+      "plan": 38.2,
+      "down": 0,
+      "run": 38.2,
+      "day": 38.2,
+      "night": 0
+    },
+    {
+      "name": "5호밀링",
+      "process": "mach",
+      "plan": 30.7,
+      "down": 0,
+      "run": 30.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "MCT",
+      "process": "mach",
+      "plan": 33.2,
+      "down": 0,
+      "run": 33.2,
+      "day": 33.2,
+      "night": 0
+    },
+    {
+      "name": "블레이드 1호기",
+      "process": "weld",
+      "plan": 35.7,
+      "down": 6,
+      "run": 29.7,
+      "day": 35.7,
+      "night": 0
+    },
+    {
+      "name": "샤시 1호기",
+      "process": "weld",
+      "plan": 35.7,
+      "down": 6,
+      "run": 29.7,
+      "day": 35.7,
+      "night": 0
+    },
+    {
+      "name": "샤시 2호기",
+      "process": "weld",
+      "plan": 35.7,
+      "down": 5,
+      "run": 30.7,
+      "day": 35.7,
+      "night": 0
+    },
+    {
+      "name": "암 2호기",
+      "process": "weld",
+      "plan": 35.7,
+      "down": 3,
+      "run": 32.7,
+      "day": 35.7,
+      "night": 0
+    },
+    {
+      "name": "붐 2호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 3,
+      "run": 27.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "트랙 1호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 3,
+      "run": 27.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "붐 1호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 2,
+      "run": 28.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "트랙 2호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 2,
+      "run": 28.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "트랙 3호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 2,
+      "run": 28.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "트랙 4호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 2,
+      "run": 28.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "암 1호기",
+      "process": "weld",
+      "plan": 35.7,
+      "down": 1,
+      "run": 34.7,
+      "day": 35.7,
+      "night": 0
+    },
+    {
+      "name": "블레이드 2호기",
+      "process": "weld",
+      "plan": 35.7,
+      "down": 1,
+      "run": 34.7,
+      "day": 35.7,
+      "night": 0
+    },
+    {
+      "name": "버켓 1호기",
+      "process": "weld",
+      "plan": 35.7,
+      "down": 1,
+      "run": 34.7,
+      "day": 35.7,
+      "night": 0
+    },
+    {
+      "name": "메인 2호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 1,
+      "run": 29.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "트랙 5호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 1,
+      "run": 29.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "버켓 2호기",
+      "process": "weld",
+      "plan": 35.7,
+      "down": 0,
+      "run": 35.7,
+      "day": 35.7,
+      "night": 0
+    },
+    {
+      "name": "서브 1호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 0,
+      "run": 30.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "서브 2호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 0,
+      "run": 30.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "서브 3호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 0,
+      "run": 30.7,
+      "day": 30.7,
+      "night": 0
+    },
+    {
+      "name": "메인 1호기",
+      "process": "weld",
+      "plan": 30.7,
+      "down": 0,
+      "run": 30.7,
+      "day": 30.7,
+      "night": 0
+    }
+  ],
+  "daily": [
+    {
+      "date": "2026-11-02",
+      "plan": 290.3,
+      "down": 18,
+      "run": 272.3,
+      "process": "all"
+    },
+    {
+      "date": "2026-11-03",
+      "plan": 262.8,
+      "down": 6,
+      "run": 256.8,
+      "process": "all"
+    },
+    {
+      "date": "2026-11-04",
+      "plan": 250.3,
+      "down": 13.5,
+      "run": 236.8,
+      "process": "all"
+    },
+    {
+      "date": "2026-11-05",
+      "plan": 285.3,
+      "down": 8,
+      "run": 277.3,
+      "process": "all"
+    }
+  ],
+  "weeks": [
+    {
+      "start": "2026-09-28",
+      "end": "2026-10-04",
+      "plan": 1312,
+      "down": 28.3,
+      "run": 1283.7
+    },
+    {
+      "start": "2026-10-05",
+      "end": "2026-10-11",
+      "plan": 808.4,
+      "down": 1,
+      "run": 807.4
+    },
+    {
+      "start": "2026-10-12",
+      "end": "2026-10-18",
+      "plan": 658.6,
+      "down": 80.3,
+      "run": 578.3000000000001
+    },
+    {
+      "start": "2026-10-19",
+      "end": "2026-10-25",
+      "plan": 1524.8,
+      "down": 30.7,
+      "run": 1494.1
+    },
+    {
+      "start": "2026-10-26",
+      "end": "2026-11-01",
+      "plan": 1599.6,
+      "down": 245.6,
+      "run": 1354
+    },
+    {
+      "start": "2026-11-02",
+      "end": "2026-11-08",
+      "plan": 1088.7,
+      "down": 45.5,
+      "run": 1043.2
+    }
+  ],
+  "history": [
+    {
+      "id": "reference-1",
+      "process": "weld",
+      "start": "2026-11-05",
+      "end": "2026-11-05",
+      "equipment": [
+        "샤시 1호기",
+        "암 1호기",
+        "암 2호기",
+        "블레이드 1호기"
+      ],
+      "codes": [
+        "A"
+      ],
+      "part": "없음",
+      "cause": "제관품 대기",
+      "action": "",
+      "down": 4,
+      "repair": 0
+    },
+    {
+      "id": "reference-2",
+      "process": "weld",
+      "start": "2026-11-05",
+      "end": "2026-11-05",
+      "equipment": [
+        "트랙 1호기",
+        "트랙 3호기",
+        "트랙 4호기"
+      ],
+      "codes": [
+        "A"
+      ],
+      "part": "없음",
+      "cause": "제관품 대기",
+      "action": "",
+      "down": 3,
+      "repair": 0
+    },
+    {
+      "id": "reference-3",
+      "process": "mach",
+      "start": "2026-11-05",
+      "end": "2026-11-05",
+      "equipment": [
+        "150NC"
+      ],
+      "codes": [
+        "C"
+      ],
+      "part": "없음",
+      "cause": "지그교체",
+      "action": "10톤 샤시 지그 -> 10톤 관절 지그",
+      "down": 0.5,
+      "repair": 0
+    },
+    {
+      "id": "reference-4",
+      "process": "mach",
+      "start": "2026-11-05",
+      "end": "2026-11-05",
+      "equipment": [
+        "130 2호기"
+      ],
+      "codes": [
+        "C"
+      ],
+      "part": "없음",
+      "cause": "지그교체",
+      "action": "10톤 링크 지그 (LH) -> (RH)",
+      "down": 0.5,
+      "repair": 0
+    },
+    {
+      "id": "reference-5",
+      "process": "weld",
+      "start": "2026-11-04",
+      "end": "2026-11-04",
+      "equipment": [
+        "샤시 1호기",
+        "샤시 2호기",
+        "암 2호기",
+        "블레이드 1호기"
+      ],
+      "codes": [
+        "A"
+      ],
+      "part": "없음",
+      "cause": "제관품 대기",
+      "action": "",
+      "down": 8,
+      "repair": 0
+    },
+    {
+      "id": "reference-6",
+      "process": "weld",
+      "start": "2026-11-04",
+      "end": "2026-11-04",
+      "equipment": [
+        "트랙 1호기",
+        "트랙 2호기"
+      ],
+      "codes": [
+        "A"
+      ],
+      "part": "없음",
+      "cause": "제관품 대기",
+      "action": "",
+      "down": 4,
+      "repair": 0
+    },
+    {
+      "id": "reference-7",
+      "process": "mach",
+      "start": "2026-11-04",
+      "end": "2026-11-04",
+      "equipment": [
+        "150NC"
+      ],
+      "codes": [
+        "C"
+      ],
+      "part": "없음",
+      "cause": "지그교체",
+      "action": "5톤 관절 지그 -> 5톤 관절 THUMB 지그 -> 10톤 샤시 지그",
+      "down": 1,
+      "repair": 0
+    },
+    {
+      "id": "reference-8",
+      "process": "mach",
+      "start": "2026-11-04",
+      "end": "2026-11-04",
+      "equipment": [
+        "135 NC"
+      ],
+      "codes": [
+        "C"
+      ],
+      "part": "없음",
+      "cause": "지그교체",
+      "action": "10톤 메인 지그 -> 5톤 메인 지그",
+      "down": 0.5,
+      "repair": 0
+    },
+    {
+      "id": "reference-9",
+      "process": "weld",
+      "start": "2026-11-03",
+      "end": "2026-11-03",
+      "equipment": [
+        "버켓 1호기",
+        "블레이드 2호기"
+      ],
+      "codes": [
+        "A"
+      ],
+      "part": "없음",
+      "cause": "제관품 대기",
+      "action": "",
+      "down": 2,
+      "repair": 0
+    },
+    {
+      "id": "reference-10",
+      "process": "weld",
+      "start": "2026-11-03",
+      "end": "2026-11-03",
+      "equipment": [
+        "메인 2호기",
+        "붐 2호기"
+      ],
+      "codes": [
+        "A"
+      ],
+      "part": "없음",
+      "cause": "제관품 대기",
+      "action": "",
+      "down": 2,
+      "repair": 0
+    },
+    {
+      "id": "reference-11",
+      "process": "mach",
+      "start": "2026-11-03",
+      "end": "2026-11-03",
+      "equipment": [
+        "150NC"
+      ],
+      "codes": [
+        "C"
+      ],
+      "part": "없음",
+      "cause": "지그교체",
+      "action": "10톤 관절 지그 -> 5톤 관절 지그",
+      "down": 0.5,
+      "repair": 0
+    },
+    {
+      "id": "reference-12",
+      "process": "mach",
+      "start": "2026-11-03",
+      "end": "2026-11-03",
+      "equipment": [
+        "MCT 호리젠탈"
+      ],
+      "codes": [
+        "B"
+      ],
+      "part": "탭 어뎁터",
+      "cause": "탭 어뎁터 파손",
+      "action": "신규 어뎁터 교체",
+      "down": 1,
+      "repair": 1
+    },
+    {
+      "id": "reference-13",
+      "process": "mach",
+      "start": "2026-11-03",
+      "end": "2026-11-03",
+      "equipment": [
+        "130 2호기"
+      ],
+      "codes": [
+        "C"
+      ],
+      "part": "없음",
+      "cause": "지그교체",
+      "action": "10톤 샤시 지그 -> 10톤 링크 지그 (LH)",
+      "down": 0.5,
+      "repair": 0
+    },
+    {
+      "id": "reference-14",
+      "process": "weld",
+      "start": "2026-11-02",
+      "end": "2026-11-02",
+      "equipment": [
+        "샤시 1호기",
+        "샤시 2호기",
+        "블레이드 1호기"
+      ],
+      "codes": [
+        "A"
+      ],
+      "part": "없음",
+      "cause": "제관품 대기",
+      "action": "",
+      "down": 9,
+      "repair": 0
+    },
+    {
+      "id": "reference-15",
+      "process": "weld",
+      "start": "2026-11-02",
+      "end": "2026-11-02",
+      "equipment": [
+        "트랙 3호기",
+        "트랙 4호기",
+        "트랙 5호기"
+      ],
+      "codes": [
+        "A"
+      ],
+      "part": "없음",
+      "cause": "제관품 대기",
+      "action": "",
+      "down": 3,
+      "repair": 0
+    },
+    {
+      "id": "reference-16",
+      "process": "weld",
+      "start": "2026-11-02",
+      "end": "2026-11-02",
+      "equipment": [
+        "붐 1호기",
+        "붐 2호기"
+      ],
+      "codes": [
+        "A"
+      ],
+      "part": "없음",
+      "cause": "제관품 대기",
+      "action": "",
+      "down": 4,
+      "repair": 0
+    },
+    {
+      "id": "reference-17",
+      "process": "mach",
+      "start": "2026-11-02",
+      "end": "2026-11-02",
+      "equipment": [
+        "MCT 호리젠탈"
+      ],
+      "codes": [
+        "B"
+      ],
+      "part": "드릴러시",
+      "cause": "드릴러시 파손",
+      "action": "신규 드릴교체",
+      "down": 2,
+      "repair": 2
+    }
+  ]
+}

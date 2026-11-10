@@ -164,6 +164,15 @@
     });
     Object.keys(counts).forEach(function (k) { var el = document.querySelector('[data-cnt="' + k + '"]'); if (el) el.textContent = '· ' + counts[k]; });
     var input = D.merge(parts);
+    // Keep the analysis page in sync with the complete workspace, independently of this page's month filter.
+    if (window.OperationCore && !state.sample) {
+      try {
+        var operationData = window.OperationCore.fromLegacy(D.analyze(input, S), D);
+        if (operationData.daily.length && !window.OperationCore.validate(operationData).length) {
+          localStorage.setItem('downtime.operation.v1', JSON.stringify(operationData));
+        }
+      } catch (e) { /* The original workspace remains available if browser storage is full. */ }
+    }
     var res = D.analyze(input, S, { month: state.month });
     if (state.month && res.months.indexOf(state.month) < 0) { state.month = ''; res = D.analyze(input, S); }
     var kinds = Object.keys(res.kinds);
@@ -353,7 +362,7 @@
     renderFiles(); compute();
     $('s-dash').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-  $('btn-reset').addEventListener('click', function () { state.files = []; state.sample = false; renderFiles(); clearResult(); });
+  $('btn-reset').addEventListener('click', function () { state.files = []; state.sample = false; try { localStorage.removeItem('downtime.operation.v1'); } catch (e) {} renderFiles(); clearResult(); });
 
   try { localStorage.removeItem(LS_AI); } catch (e) {}
 

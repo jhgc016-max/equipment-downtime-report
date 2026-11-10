@@ -18,7 +18,7 @@
 
 스캔 읽기는 ChatGPT 로그인 방식만 사용합니다. Windows에서 `start-chatgpt.cmd` 실행 → ChatGPT 로그인 → 모델 선택 → PDF/사진 선택 → 전송 동의 → 읽기 순서입니다. API 키 입력과 키 기반 호출 기능은 제거했습니다.
 
-`public/index.html`을 브라우저에서 열고 **예제로 해보기**를 누르세요. 엑셀 업로드, 기준 설정, 가동률 차트, 보고서 인쇄 및 HTML·엑셀 내보내기가 포함됩니다. 스캔본 읽기, 사용법, 기획서는 각각 별도 페이지입니다.
+`npm.cmd run preview`로 실행하고 http://127.0.0.1:8765 에서 가동·비가동 분석을 여세요. `index.html`은 새 분석 화면이며 `import.html`에서 기존 엑셀 업로드·기준 설정·공유 동기화·내보내기를 사용할 수 있습니다. 분석 화면은 JSON 운영자료를 읽으므로 HTTP 서버가 필요합니다. 자세한 데이터 출처와 구현 결정은 [IMPLEMENTATION-NOTES.md](IMPLEMENTATION-NOTES.md)를 참고하세요.
 
 정적 GitHub Pages에서는 수동 입력·예제·집계·내보내기를 사용할 수 있습니다. ChatGPT 로그인과 문서 읽기는 PC 실행 화면에서 이용합니다. 공개 사이트에 로컬 로그인 서버를 연결하지 않습니다.
 
