@@ -42,6 +42,7 @@ export async function streamResponse(
   try {
     const result = await client.responses.create({
       model: options.model,
+      service_tier: "default",
       input: options.request ? options.request.input as ResponseCreateParamsStreaming["input"] : input.map((message) => ({ role: message.role, content: message.content })),
       ...(options.request?.text ? { text: options.request.text as ResponseCreateParamsStreaming["text"] } : {}),
       ...(options.instructions !== undefined ? { instructions: options.instructions } : {}),

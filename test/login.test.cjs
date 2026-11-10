@@ -24,8 +24,8 @@ test('local login is authenticated, consented, scoped and preserves completed pa
 test('modified SDK sends PDF/schema with OAuth and returns the completed response',async t=>{
  const {streamResponse}=await import(pathToFileURL(path.resolve(__dirname,'../vendor/siwc-local/dist/responses.js')).href);
  const request=API.buildRequest(file,'mach');const output=payload();
- t.mock.method(globalThis,'fetch',async(url,init)=>{assert.equal(String(url),'https://api.openai.com/v1/responses');const b=JSON.parse(init.body);assert.deepEqual(b.input,request.input);assert.deepEqual(b.text,request.text);assert.equal(b.store,false);assert.equal(b.stream,true);assert.equal(b.max_output_tokens,undefined);assert.equal(b.temperature,undefined);assert.equal(new Headers(init.headers).get('authorization'),'Bearer synthetic-test-token');return new Response('data: '+JSON.stringify({type:'response.completed',response:output})+'\n\n',{headers:{'content-type':'text/event-stream'}});});
- const result=await streamResponse('synthetic-test-token',{model:'gpt-6.1-sol',input:'',instructions:request.instructions,request},new AbortController().signal);assert.deepEqual(result.response,output);assert.equal(API.convert(result.response).pages.length,1);
+ t.mock.method(globalThis,'fetch',async(url,init)=>{assert.equal(String(url),'https://api.openai.com/v1/responses');const b=JSON.parse(init.body);assert.deepEqual(b.input,request.input);assert.deepEqual(b.text,request.text);assert.equal(b.store,false);assert.equal(b.stream,true);assert.equal(b.model,'gpt-6-luna');assert.equal(b.service_tier,'default');assert.equal(b.max_output_tokens,undefined);assert.equal(b.temperature,undefined);assert.equal(new Headers(init.headers).get('authorization'),'Bearer synthetic-test-token');return new Response('data: '+JSON.stringify({type:'response.completed',response:output})+'\n\n',{headers:{'content-type':'text/event-stream'}});});
+ const result=await streamResponse('synthetic-test-token',{model:'gpt-6-luna',input:'',instructions:request.instructions,request},new AbortController().signal);assert.deepEqual(result.response,output);assert.equal(API.convert(result.response).pages.length,1);
 });
 test('Windows DPAPI roundtrip and ciphertext rejection without persisted secrets',{skip:process.platform!=='win32'},async()=>{
  const e=require('../desktop/windows-security.cjs').encryption();assert.equal(await e.isAvailable(),true);const text='synthetic offline token';const cipher=await e.encrypt(text);assert.ok(!Buffer.from(cipher).includes(Buffer.from(text)));assert.equal(await e.decrypt(cipher),text);await assert.rejects(e.decrypt(Buffer.from('invalid ciphertext')));
@@ -44,7 +44,7 @@ test('completed metadata can omit JSON already present in delta or done events',
   [{type:'response.output_text.delta',output_index:0,content_index:0,delta:text},{type:'response.output_text.done',output_index:0,content_index:0,text}],
  ]){
   wire=events.map(event).join('')+event({type:'response.completed',response:{status:'completed'}});
-  const result=await streamResponse('synthetic-test-token',{model:'gpt-6.1-sol',input:'test'},new AbortController().signal);
+  const result=await streamResponse('synthetic-test-token',{model:'gpt-6-luna',input:'test'},new AbortController().signal);
   assert.equal(API.convert(completedScanResponse(result)).pages[0].sourcePage,1);
  }
  assert.throws(()=>completedScanResponse({text,response:{status:'incomplete'}}));
