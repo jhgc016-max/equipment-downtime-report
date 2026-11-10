@@ -5,8 +5,8 @@ const file={mime:'application/pdf',base64:Buffer.from('%PDF-synthetic').toString
 function fixture(s){if(Array.isArray(s.type))return null;if(s.enum)return s.enum[0];if(s.type==='object')return Object.fromEntries(Object.entries(s.properties).map(([k,v])=>[k,fixture(v)]));if(s.type==='array')return [];if(s.type==='integer')return 1;return '';}
 function payload(){const p=fixture(API.schema.properties.pages.items);return {status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({pageCount:1,pages:[p]})}]}]};}
 test('local login is authenticated, consented, scoped and preserves completed pages',async()=>{
- let shared=false,calls=0;
- const client={getSession:async()=>({status:shared?'connected':'disconnected',sharing:shared,identity:{email:'synthetic@example.invalid'},credentials:{accessToken:'must-never-reach-browser'}}),signIn:async()=>{shared=true;},cancelSignIn(){},disconnect:async()=>{shared=false;},listModels:async()=>[{slug:'gpt-6.1-sol',displayName:'Test Sol'}],streamResponse:async options=>{calls++;assert.equal(options.model,'gpt-6.1-sol');assert.equal(options.request.input[0].content[1].type,'input_file');assert.equal(options.request.input[0].content[1].detail,'high');assert.equal(options.request.text.format.strict,true);return {response:payload(),text:'unused'};}};
+ let shared=false,calls=0,signIns=[];
+ const client={getSession:async()=>({status:shared?'connected':'disconnected',sharing:shared,identity:{email:'synthetic@example.invalid'},credentials:{accessToken:'must-never-reach-browser'}}),signIn:async options=>{signIns.push(options);shared=true;},cancelSignIn(){},disconnect:async()=>{shared=false;},listModels:async()=>[{slug:'gpt-6.1-sol',displayName:'Test Sol'}],streamResponse:async options=>{calls++;assert.equal(options.model,'gpt-6.1-sol');assert.equal(options.request.input[0].content[1].type,'input_file');assert.equal(options.request.input[0].content[1].detail,'high');assert.equal(options.request.text.format.strict,true);return {response:payload(),text:'unused'};}};
  const local=createLocalServer(client);const launch=await local.start();const origin=new URL(launch).origin;
  const unlocked=await fetch(launch,{redirect:'manual'});assert.equal(unlocked.status,302);const cookie=unlocked.headers.get('set-cookie').split(';')[0];assert.ok(unlocked.headers.get('set-cookie').includes('HttpOnly'));
  const call=(route,body,extra={})=>fetch(origin+'/api/chatgpt/'+route,{method:body===undefined?'GET':'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json',...extra},body:body===undefined?undefined:JSON.stringify(body)});
@@ -18,7 +18,7 @@ test('local login is authenticated, consented, scoped and preserves completed pa
   assert.equal((await call('models')).status,200);assert.equal((await call('scan',{file,model:'gpt-6.1-sol',consent:false})).status,403);
   assert.equal((await call('scan',{file,model:'wrong-model',consent:true})).status,400);assert.equal(calls,0);
   const result=await call('scan',{file,model:'gpt-6.1-sol',consent:true});assert.equal(result.status,200);assert.equal((await result.json()).pages[0].sourcePage,1);assert.equal(calls,1);
-  const out=await call('sign-out',{});assert.equal((await out.json()).sharing,false);assert.ok(!errorMessage({code:'invalid_request',message:'secret text'}).includes('secret text'));
+  assert.equal(signIns[0].newProfile,undefined);assert.equal((await call('add-account',{})).status,200);assert.equal(signIns[1].newProfile,true);assert.equal(signIns[1].reconsent,true);const out=await call('sign-out',{});assert.equal((await out.json()).sharing,false);assert.ok(!errorMessage({code:'invalid_request',message:'secret text'}).includes('secret text'));
  }finally{local.server.closeAllConnections();await new Promise(resolve=>local.server.close(resolve));}
 });
 test('modified SDK sends PDF/schema with OAuth and returns the completed response',async t=>{
