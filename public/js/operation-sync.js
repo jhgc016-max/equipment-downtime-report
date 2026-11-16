@@ -9,10 +9,17 @@
   }
   function announce(message){window.dispatchEvent(new CustomEvent('operation-workspace-updated',{detail:{message}}));}
   function decode(workspace){
-    const sheets=workspace.files.flatMap(f=>f.sheets),normalized=sheets.find(s=>s.type==='operation-v1');
-    if(normalized)return JSON.parse(normalized.aoa[0][0]);
+    const sheets=workspace.files.flatMap(f=>f.sheets),normalized=sheets.filter(s=>s.type==='operation-v1');
     const D=window.Downtime,C=window.OperationCore;
-    return window.CompanyWorkbook?.parse(sheets)||C.fromLegacy(D.analyze(D.merge(workspace.files.flatMap(f=>f.sheets.filter(s=>s.type!=='skip').map(s=>D.parseSheet(s.aoa,s.type,{file:f.name,sheet:s.name},workspace.settings)))),workspace.settings),D);
+    let base=normalized.reduce((a,s)=>C.mergeData(a,JSON.parse(s.aoa[0][0])),{equipment:[],daily:[],history:[]});
+    const company=window.CompanyWorkbook?.parse(sheets);if(company)base=C.mergeData(base,company);
+    const settings={...workspace.settings,equipGroups:{...workspace.settings.equipGroups,...Object.fromEntries(base.equipment.map(e=>[e.name,e.process]))}};
+    const parts=workspace.files.flatMap(f=>f.sheets.filter(s=>s.type!=='skip'&&s.type!=='operation-v1'&&(!company||s.type==='form')).map(s=>D.parseSheet(s.aoa,s.type,{file:f.name,sheet:s.name},settings)));
+    if(!parts.length)return base;
+    const input=D.merge(parts),extra=C.fromLegacy(D.analyze(input,settings),D);
+    // Scan downtime rows are also action history; the operation totals remain separate.
+    input.records.filter(r=>r.kind==='equip'&&r.cls==='down').forEach((r,i)=>extra.history.push({id:'scan-'+r.date+'-'+r.subject+'-'+r.start+'-'+r.end+'-'+i,process:r.group,start:r.date,end:r.date,equipment:[r.subject],codes:[String(r.code).split(':').pop()].filter(c=>c!=='?'),part:'',cause:r.note||'',action:r.note||'',down:(r.end-r.start)/60,repair:null}));
+    return C.mergeData(base,extra);
   }
   function apply(value){
     const workspace=window.DowntimeSync.snapshot(value),D=window.Downtime,C=window.OperationCore;

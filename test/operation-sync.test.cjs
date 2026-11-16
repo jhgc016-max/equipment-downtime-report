@@ -11,6 +11,10 @@ test('analysis sync consumes shared Excel and stages uploads without publishing 
   const context={window:{Downtime:D,OperationCore:C,DowntimeSync:Sync,CloudSync:{changed(){changes++;}},dispatchEvent:e=>events.push(e)},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)}};
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/operation-sync.js'),'utf8'),context);
   assert.equal(context.window.OperationSync.get().files.length,0);
+  const base={version:1,imported:true,equipment:[{name:'135NC',process:'mach'}],daily:[{date:'2026-11-02',equipment:'135NC',process:'mach',plan:8,run:8,down:0}],history:[]};
+  const mixed={version:1,settings:{},files:[{id:'base',name:'base',sheets:[{name:'analysis',type:'operation-v1',aoa:[[JSON.stringify(base)]]}]},{id:'scan20',name:'scan',sheets:[{name:'일보',type:'form',aoa:[D.FORM_HEAD.slice(),['135NC','가공','','2026-11-20','주간','비가동','C','11:00','11:30',30,'지그교체 — 5톤 메인 > 10톤 메인']]}]}]};
+  const decoded=context.window.OperationSync.decode(mixed);assert.equal(decoded.daily.length,2);assert.equal(decoded.daily.find(r=>r.date==='2026-11-20').down,.5);assert.equal(decoded.history.length,1);assert.ok(decoded.history[0].action.includes('지그교체'));
+  assert.equal(context.window.OperationSync.decode(mixed).history.length,1);
   const aoa=[D.FORM_HEAD.slice(),['150NC','','','2026-11-02','주간','가동','','08:00','12:00','','정상 가동']];
   const workspace={version:1,settings:{},files:[{id:'a',name:'operations',sheets:[{name:'일보',type:'form',aoa}]}]};
   context.window.OperationSync.apply(workspace);
