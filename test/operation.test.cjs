@@ -5,7 +5,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const C=require('../public/js/operation-core.js');
 const D=require('../public/js/downtime.js');
-const data=require('../public/data/operation-reference.json');
+const data=require('./fixtures/operation-reference.json');
 test('reference records preserve 17 originals, 33 allocations and 45.5 hours',()=>{
   const h=C.history(data,'2026-11-01','2026-11-30');assert.equal(data.equipment.length,31);assert.equal(h.count,17);assert.equal(h.rows.length,33);assert.equal(h.total,45.5);
   const shared=data.history.find(r=>r.down===4&&r.equipment.length===4);
