@@ -21,7 +21,7 @@
     if(weeks.length&&weeks[0].start===a&&weeks.at(-1).end===b)return sum(weeks);
     return sum(data.daily.filter(r=>r.date>=a&&r.date<=b));
   }
-  function buckets(data,a,b,unit){const out=[];let cursor=unit==='week'?monday(a):unit==='month'?a.slice(0,7)+'-01':a;while(cursor<=b){const end=unit==='week'?addDays(cursor,6):unit==='month'?monthEnd(cursor.slice(0,7)):cursor;out.push({start:cursor,end,...aggregate(data,cursor,end)});cursor=addDays(end,1);}return out;}
+  function buckets(data,a,b,unit,process='all'){const out=[];let cursor=unit==='week'?monday(a):unit==='month'?a.slice(0,7)+'-01':a;while(cursor<=b){const end=unit==='week'?addDays(cursor,6):unit==='month'?monthEnd(cursor.slice(0,7)):cursor;out.push({start:cursor,end,...aggregate(data,cursor,end,process)});cursor=addDays(end,1);}return out;}
   function history(data,a,b,filter={}){
     const records=data.history.filter(r=>overlaps(r,a,b));
     const rows=records.flatMap(r=>r.equipment.map(e=>({...r,equipmentName:e,allocated:r.down==null?null:r.down/r.equipment.length,repairAllocated:r.repair==null?null:r.repair/r.equipment.length}))).filter(r=>(!filter.process||filter.process==='all'||r.process===filter.process)&&(!filter.equipment||r.equipmentName===filter.equipment)&&(!filter.code||r.codes.includes(filter.code)));

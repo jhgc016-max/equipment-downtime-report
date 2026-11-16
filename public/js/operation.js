@@ -2,7 +2,7 @@
   'use strict';
   const C=window.OperationCore,D=window.Downtime,$=id=>document.getElementById(id),esc=D.esc;
   const KEY='downtime.operation.v1';let data,reference,staged=null,stagedWorkspace=null;
-  const state={tab:'trend',month:'2026-11',unit:'week',range:{start:'2026-11-01',end:'2026-11-30'},selection:null,process:'all',equipment:'',code:'',reportDate:'2026-11-02',appendix:false};
+  const state={tab:'trend',month:'2026-11',unit:'week',trendProcess:'all',range:{start:'2026-11-01',end:'2026-11-30'},selection:null,process:'all',equipment:'',code:'',reportDate:'2026-11-02',appendix:false};
   const fmt=(v,d=1)=>v==null?'—':v.toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d});
   const hours=v=>fmt(v)+'h',pct=v=>fmt(v)+'%',period=()=>state.range.start+' ~ '+state.range.end;
   const empty=t=>'<div class="empty">'+esc(t||'등록 데이터 없음')+'</div>';
@@ -38,9 +38,9 @@
   }
   function dateControls(range=state.range){return '<label class="muted">기준 월 <input type="month" id="month-input" value="'+state.month+'"></label><span class="muted">'+range.start+' ~ '+range.end+'</span>';}
   function trend(){
-    const trendRange=C.range(state.month,state.unit),buckets=C.buckets(data,trendRange.start,trendRange.end,state.unit);
-    let out='<div class="panel-head"><div class="controls"><h3>'+state.month.slice(0,4)+'년 '+Number(state.month.slice(5))+'월 기준 추이</h3>'+dateControls(trendRange)+'</div><div class="segment" aria-label="추이 단위">'+[['day','일별'],['week','주별'],['month','월별']].map(([u,t])=>'<button data-unit="'+u+'" class="'+(state.unit===u?'selected':'')+'" aria-pressed="'+(state.unit===u)+'">'+t+'</button>').join('')+'</div></div>'+chart(buckets);
-    out+='<div class="two">'+Object.keys(C.names).map(p=>{const rows=filteredHistory({process:p}).rows.sort((a,b)=>b.start.localeCompare(a.start));return '<article class="mini-panel"><div class="row"><h3>'+C.names[p]+'</h3><span class="muted">확인된 이력 합계 '+hours(rows.reduce((s,r)=>s+(r.allocated||0),0))+'</span></div>'+(rows.length?rows.slice(0,5).map(r=>'<button class="list-row" data-equipment="'+esc(r.equipmentName)+'" data-process="'+p+'"><span class="muted">'+r.start+'</span><strong>'+esc(r.equipmentName)+'</strong><b class="orange">'+hours(r.allocated)+'</b></button>').join(''):empty('조회기간 수리·조치 이력 없음'))+'<button class="link-button" data-all-process="'+p+'">전체 '+rows.length+'개 항목 보기 →</button></article>';}).join('')+'</div>';
+    const trendRange=C.range(state.month,state.unit),buckets=C.buckets(data,trendRange.start,trendRange.end,state.unit,state.trendProcess);
+    let out='<div class="panel-head"><div class="controls"><h3>'+state.month.slice(0,4)+'년 '+Number(state.month.slice(5))+'월 기준 추이</h3>'+dateControls(trendRange)+'</div><div class="segment" aria-label="추이 단위">'+[['day','일별'],['week','주별'],['month','월별']].map(([u,t])=>'<button data-unit="'+u+'" class="'+(state.unit===u?'selected':'')+'" aria-pressed="'+(state.unit===u)+'">'+t+'</button>').join('')+'</div></div><div class="segment" style="width:fit-content;margin-bottom:14px" aria-label="그래프 분류">'+[['all','종합'],['mach','NC'],['weld','로봇']].map(([p,t])=>'<button data-trend-process="'+p+'" class="'+(state.trendProcess===p?'selected':'')+'" aria-pressed="'+(state.trendProcess===p)+'">'+t+'</button>').join('')+'</div>'+chart(buckets,state.trendProcess==='all'?'전체 종합':C.names[state.trendProcess]);
+    out+='<div class="'+(state.trendProcess==='all'?'two':'')+'">'+Object.keys(C.names).filter(p=>state.trendProcess==='all'||p===state.trendProcess).map(p=>{const rows=C.history(data,trendRange.start,trendRange.end,{process:p}).rows.sort((a,b)=>b.start.localeCompare(a.start));return '<article class="mini-panel"><div class="row"><h3>'+C.names[p]+'</h3><span class="muted">확인된 이력 합계 '+hours(rows.reduce((s,r)=>s+(r.allocated||0),0))+'</span></div>'+(rows.length?rows.slice(0,5).map(r=>'<button class="list-row" data-equipment="'+esc(r.equipmentName)+'" data-process="'+p+'"><span class="muted">'+r.start+'</span><strong>'+esc(r.equipmentName)+'</strong><b class="orange">'+hours(r.allocated)+'</b></button>').join(''):empty('조회기간 수리·조치 이력 없음'))+'<button class="link-button" data-all-process="'+p+'">전체 '+rows.length+'개 항목 보기 →</button></article>';}).join('')+'</div>';
     return out;
   }
   function equipmentView(){
@@ -53,7 +53,7 @@
   function historyView(){
     const h=filteredHistory(),equips=data.equipment.filter(e=>state.process==='all'||e.process===state.process);
     let out='<div class="panel-head"><h3>비가동·수리 이력</h3><div class="controls"><span class="muted">'+period()+'</span><button data-reset-history>전체 이력 조회</button></div></div>';
-    if(state.selection){out+='<div class="panel-head"><h3>선택 기간 일별 가동·비가동 추이</h3><button data-week-all>주간 전체 보기</button></div>'+chart(C.buckets(data,state.selection.start,state.selection.end,'day'),'주간 일별 추이')+categoryView(state.range.start,state.range.end);}
+    if(state.selection){out+='<div class="panel-head"><h3>선택 기간 일별 가동·비가동 추이</h3><button data-week-all>주간 전체 보기</button></div>'+chart(C.buckets(data,state.selection.start,state.selection.end,'day',state.process),'주간 일별 추이')+categoryView(state.range.start,state.range.end);}
     out+='<details><summary>공정별 비가동 범례 안내</summary>'+Object.keys(C.names).map(p=>'<p class="muted"><b>'+C.names[p]+'</b>　'+Object.entries(C.codes[p]).map(([k,v])=>esc(k+': '+v)).join(' · ')+'</p>').join('')+'</details>'+reconciliation();
     out+='<div class="controls"><label>공정 <select id="filter-process"><option value="all">전체</option>'+Object.entries(C.names).map(([p,n])=>'<option value="'+p+'" '+(p===state.process?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>비가동 범례 <select id="filter-code"><option value="">전체</option>'+(state.process==='all'?'':Object.entries(C.codes[state.process]).map(([c,n])=>'<option value="'+c+'" '+(state.code===c?'selected':'')+'>'+c+' '+n+'</option>').join(''))+'</select></label><label>설비 <select id="filter-equipment"><option value="">전체</option>'+equips.map(e=>'<option '+(state.equipment===e.name?'selected':'')+' value="'+esc(e.name)+'">'+esc(e.name)+'</option>').join('')+'</select></label></div><div class="panel-head" style="margin-top:20px"><div><strong>수리·조치 이력</strong><p class="muted">'+h.rows.length+'행 · 원본 '+h.count+'건 · 비가동시간이 없는 수리 포함</p></div><strong class="orange">표시 비가동 합계 '+hours(h.total)+'</strong></div>'+(h.rows.length?historyTable(h.rows):empty('선택한 조건에 해당하는 수리·조치 이력이 없습니다.'))+'<p class="muted">복수 설비 이력의 비가동·수리시간은 각 설비에 균등 배분합니다. 표시 행 수는 원본 발생 건수와 다릅니다.</p>';
     return out;
@@ -74,12 +74,13 @@
   }
   function resetFilters(){state.process='all';state.equipment='';state.code='';}
   function chooseRange(){state.range=C.range(state.month,state.unit);state.selection=null;}
-  function openHistory(process,equipment='',code=''){state.tab='history';state.process=process;state.equipment=equipment;state.code=code;render();}
+  function openHistory(process,equipment='',code=''){if(state.tab==='trend')state.range=C.range(state.month,state.unit);state.tab='history';state.process=process;state.equipment=equipment;state.code=code;render();}
   document.addEventListener('click',e=>{
     const el=e.target.closest('button,[data-start]');if(!el||!data)return;
-    if(el.dataset.tab){state.tab=el.dataset.tab;if(state.tab==='equipment'&&!data.imported&&!state.selection)state.range={start:state.month+'-01',end:C.monthEnd(state.month)};render();}
+    if(el.dataset.trendProcess){state.trendProcess=el.dataset.trendProcess;render();}
+    else if(el.dataset.tab){state.tab=el.dataset.tab;if(state.tab==='equipment'&&!data.imported&&!state.selection)state.range={start:state.month+'-01',end:C.monthEnd(state.month)};render();}
     else if(el.dataset.unit){state.unit=el.dataset.unit;chooseRange();resetFilters();render();}
-    else if(el.dataset.start){state.range={start:el.dataset.start,end:el.dataset.end};state.selection={start:C.monday(el.dataset.start),end:C.addDays(C.monday(el.dataset.start),6)};resetFilters();state.tab='history';render();}
+    else if(el.dataset.start){state.range={start:el.dataset.start,end:el.dataset.end};state.selection={start:C.monday(el.dataset.start),end:C.addDays(C.monday(el.dataset.start),6)};resetFilters();state.process=state.trendProcess;state.tab='history';render();}
     else if(el.hasAttribute('data-equipment'))openHistory(el.dataset.process,el.dataset.equipment);
     else if(el.dataset.allProcess)openHistory(el.dataset.allProcess);
     else if(el.dataset.category){const [p,c]=el.dataset.category.split(':');if(c!=='?')openHistory(p,'',c);}
