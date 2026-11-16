@@ -5,7 +5,7 @@
   const config = window.DowntimeSyncConfig || {};
   const localReader = document.body?.dataset?.localReader === 'true';
   let localSaving = false;
-  let client, store, adapter, applying = false, connected = false, timer, polling;
+  let client, store, adapter = window.OperationSync, applying = false, connected = false, timer, polling;
   function say(text) { $('sync-status').textContent = text; }
   function state(s) {
     say(s.message); $('sync-conflict').hidden = !s.conflict;
@@ -93,7 +93,9 @@
       <p><span id="sync-status" role="status">공개 자료 연결 중…</span></p>
       <div class="btnrow"><button class="btn" id="sync-now" type="button" disabled>지금 동기화</button></div>
       <div class="warn" id="sync-conflict" hidden><b>어느 자료를 사용할까요?</b><p>자동으로 덮어쓰지 않았습니다. 교체 전 이 PC 자료와 클라우드 자료를 내려받아 비교할 수 있습니다.</p><div class="btnrow"><button class="btn" id="sync-local-copy" type="button">이 PC 백업(JSON)</button><button class="btn" id="sync-cloud-copy" type="button">클라우드 백업(JSON)</button><button class="btn" id="sync-use-cloud" type="button">클라우드 자료 사용</button><button class="btn" id="sync-use-local" type="button">이 PC 자료로 저장</button></div></div>`;
-    document.querySelector('main .wrap').prepend(panel);
+    const mount = document.querySelector('[data-cloud-sync-mount]');
+    if (mount?.appendChild) { panel.className = 'panel operation-sync'; mount.appendChild(panel); }
+    else document.querySelector('main .wrap').prepend(panel);
     if(localReader){panel.className='card reader-sync';panel.innerHTML='<p><span id="sync-status" role="status">클라우드 연결 중…</span></p><button class="btn" id="sync-now" type="button" disabled>연결 새로고침</button>';}
     $('sync-now').disabled = true;
     if (!config.url || !config.publishableKey) { say('관리자가 Supabase 프로젝트를 연결하면 사용할 수 있습니다. 현재는 이 PC에서만 작업합니다.'); return; }

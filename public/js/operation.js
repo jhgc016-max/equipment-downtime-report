@@ -1,7 +1,7 @@
 (async function(){
   'use strict';
   const C=window.OperationCore,D=window.Downtime,$=id=>document.getElementById(id),esc=D.esc;
-  const KEY='downtime.operation.v1';let data,reference,staged=null;
+  const KEY='downtime.operation.v1';let data,reference,staged=null,stagedWorkspace=null;
   const state={tab:'trend',month:'2026-11',unit:'week',range:{start:'2026-11-01',end:'2026-11-30'},selection:null,process:'all',equipment:'',code:'',reportDate:'2026-11-02',appendix:false};
   const fmt=(v,d=1)=>v==null?'—':v.toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d});
   const hours=v=>fmt(v)+'h',pct=v=>fmt(v)+'%',period=()=>state.range.start+' ~ '+state.range.end;
@@ -95,7 +95,7 @@
   $('upload').onclick=()=>$('import-dialog').showModal();$('close-import').onclick=()=>$('import-dialog').close();
   function save(next){localStorage.setItem(KEY,JSON.stringify(next));data=next;const latest=data.daily.map(d=>d.date).sort().at(-1);if(latest){state.month=latest.slice(0,7);state.reportDate=C.monday(latest);}chooseRange();resetFilters();render();}
   $('operation-file').onchange=async e=>{
-    staged=null;$('apply-import').disabled=true;const file=e.target.files[0];if(!file)return;$('import-preview').innerHTML='<p>엑셀 형식과 시간을 검증하고 있습니다…</p>';
+    staged=null;stagedWorkspace=null;$('apply-import').disabled=true;const file=e.target.files[0];if(!file)return;$('import-preview').innerHTML='<p>엑셀 형식과 시간을 검증하고 있습니다…</p>';
     try{
       const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),parts=[];for(const name of wb.SheetNames){const aoa=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:''}),type=D.detectSheet(aoa,name).type;if(type&&type!=='skip')parts.push(D.parseSheet(aoa,type,{file:file.name,sheet:name},D.normSettings({})));}
       const result=D.analyze(D.merge(parts),{});const next=C.fromLegacy(result,D);next.source='등록한 엑셀 · '+file.name;
@@ -105,13 +105,14 @@
       const errors=C.validate(next).concat(unknown.map(e=>'등록되지 않은 설비: '+e.name+' · 상세 등록의 설비군 설정에서 등록하세요.'));
       const warnings=result.issues.filter(i=>i.level==='warn');
       $('import-preview').innerHTML='<div class="note">설비 '+next.equipment.length+'대 · 일자별 '+next.daily.length+'행 · 수리 '+next.history.length+'건. 반영하면 현재 분석 자료 전체를 교체합니다.</div>'+(errors.length?'<div class="toast error">'+errors.map(esc).join('<br>')+'</div>':'')+(warnings.length?'<div class="note">확인할 것<br>'+warnings.map(i=>esc(JSON.stringify(i))).join('<br>')+'</div>':'')+table(['날짜','설비','계획(h)','비가동(h)'],next.daily.slice(0,10).map(d=>[d.date,esc(d.equipment),fmt(d.plan),fmt(d.down)]));
-      if(!errors.length){staged=next;$('apply-import').disabled=false;}
+      if(!errors.length){staged=next;stagedWorkspace={version:1,files:[{id:window.crypto.randomUUID(),name:file.name,sheets:wb.SheetNames.map(name=>{const aoa=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:''});return {name,aoa,type:D.detectSheet(aoa,name).type||'skip'};})}],settings:{}};$('apply-import').disabled=false;}
     }catch(err){$('import-preview').innerHTML='<div class="toast error">'+esc(err.message)+'</div>';}
   };
-  $('apply-import').onclick=()=>{if(!staged)return;try{save(staged);$('import-dialog').close();notify('검증한 엑셀 자료를 반영했습니다.');}catch(e){$('import-preview').innerHTML+='<p class="toast error">브라우저에 저장하지 못했습니다. 저장 공간을 확인하세요.</p>';}};
+  $('apply-import').onclick=()=>{if(!staged)return;try{save(staged);if(stagedWorkspace)window.OperationSync?.set(stagedWorkspace);$('import-dialog').close();notify('검증한 엑셀 자료를 반영했습니다. 동기화 상태는 위에서 확인하세요.');}catch(e){$('import-preview').innerHTML+='<p class="toast error">브라우저에 저장하지 못했습니다. 저장 공간을 확인하세요.</p>';}};
   $('restore-reference').onclick=()=>{localStorage.removeItem(KEY);data=reference;state.month='2026-11';state.reportDate='2026-11-02';state.unit='week';chooseRange();resetFilters();render();$('import-dialog').close();notify('제공된 참고 운영자료로 전환했습니다.');};
   async function load(){try{const response=await fetch('data/operation-reference.json',{cache:'no-cache'});if(!response.ok)throw new Error('운영자료를 불러오지 못했습니다 ('+response.status+')');reference=await response.json();data=reference;try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved?.version===1&&saved.imported&&Array.isArray(saved.daily)&&!C.validate(saved).length){data=saved;const latest=data.daily.map(d=>d.date).sort().at(-1);if(latest){state.month=latest.slice(0,7);state.reportDate=C.monday(latest);chooseRange();}}}catch(e){notify('저장된 분석 자료를 읽지 못해 참고 운영자료를 표시합니다.',true);}render();}catch(e){$('tab-content').innerHTML=empty(e.message);notify('새로고침으로 다시 시도할 수 있습니다.',true);}}
   $('refresh').onclick=async()=>{notify('운영자료를 다시 불러오고 있습니다…');await load();if(data)notify('운영자료를 새로 불러왔습니다.');};
   window.addEventListener('storage',e=>{if(e.key===KEY)load();});
+  window.addEventListener('operation-workspace-updated',async e=>{await load();if(e.detail?.message)notify(e.detail.message);});
   await load();
 })();

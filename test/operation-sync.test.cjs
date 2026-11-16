@@ -1,0 +1,20 @@
+'use strict';
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const D=require('../public/js/downtime.js');
+const C=require('../public/js/operation-core.js');
+const Sync=require('../public/js/sync-core.js');
+test('analysis sync consumes shared Excel and stages uploads without publishing captured reference data',()=>{
+  const storage=new Map(),events=[];let changes=0;
+  const context={window:{Downtime:D,OperationCore:C,DowntimeSync:Sync,CloudSync:{changed(){changes++;}},dispatchEvent:e=>events.push(e)},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)}};
+  vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/operation-sync.js'),'utf8'),context);
+  assert.equal(context.window.OperationSync.get().files.length,0);
+  const aoa=[D.FORM_HEAD.slice(),['150NC','','','2026-11-02','주간','가동','','08:00','12:00','','정상 가동']];
+  const workspace={version:1,settings:{},files:[{id:'a',name:'operations',sheets:[{name:'일보',type:'form',aoa}]}]};
+  context.window.OperationSync.apply(workspace);
+  const cached=JSON.parse(storage.get('downtime.operation.v1'));assert.equal(cached.equipment[0].name,'150NC');assert.equal(cached.daily[0].date,'2026-11-02');assert.equal(events.at(-1).type,'operation-workspace-updated');assert.equal(changes,0);
+  context.window.OperationSync.set(workspace);assert.equal(changes,1);assert.equal(context.window.OperationSync.get().files[0].id,'a');
+  context.window.OperationSync.apply({version:1,settings:{},files:[]});assert.equal(storage.has('downtime.operation.v1'),false);
+});
