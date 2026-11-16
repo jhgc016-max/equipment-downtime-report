@@ -11,7 +11,7 @@
   function apply(value){
     const workspace=window.DowntimeSync.snapshot(value),D=window.Downtime,C=window.OperationCore;
     const parts=workspace.files.flatMap(f=>f.sheets.filter(s=>s.type!=='skip').map(s=>D.parseSheet(s.aoa,s.type,{file:f.name,sheet:s.name},workspace.settings)));
-    const next=C.fromLegacy(D.analyze(D.merge(parts),workspace.settings),D);
+    const next=window.CompanyWorkbook?.parse(workspace.files.flatMap(f=>f.sheets))||C.fromLegacy(D.analyze(D.merge(parts),workspace.settings),D);
     const errors=C.validate(next);
     localStorage.setItem(RAW,JSON.stringify(workspace));
     if(next.daily.length&&!errors.length){

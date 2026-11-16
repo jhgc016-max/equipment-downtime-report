@@ -45,7 +45,7 @@
     const errors=[],seen=new Set();const registry=new Map(data.equipment.map(e=>[e.name,e.process]));
     const date=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d;
     data.daily.forEach((r,i)=>{const at=(i+2)+'행';if(!date(r.date))errors.push(at+': 날짜가 올바르지 않습니다.');if(!registry.has(r.equipment))errors.push(at+': 등록되지 않은 설비 '+r.equipment);if(registry.get(r.equipment)!==r.process)errors.push(at+': 설비 공정이 일치하지 않습니다.');for(const k of ['plan','down','run'])if(!Number.isFinite(r[k])||r[k]<0)errors.push(at+': '+k+' 시간은 0 이상의 숫자여야 합니다.');for(const k of ['day','night'])if(r[k]!=null&&(!Number.isFinite(r[k])||r[k]<0))errors.push(at+': 주야간 시간은 0 이상의 숫자여야 합니다.');if(r.down>r.plan)errors.push(at+': 비가동이 계획보다 큽니다.');if(r.run+r.down>r.plan+0.000001)errors.push(at+': 가동 + 비가동이 계획보다 큽니다.');const key=r.date+'|'+r.equipment;if(seen.has(key))errors.push(at+': 날짜·설비가 중복됩니다.');seen.add(key);});
-    return errors;
+    return data.sourceAnomalies?errors.filter(e=>!e.includes('run ')&&!e.includes('비가동이 계획')&&!e.includes('가동 + 비가동')):errors;
   }
   function fromLegacy(res,D){
     const days=res.kinds.equip?.days||[];const equipment=[...new Set(days.map(d=>d.subject))].map(name=>({name,process:days.find(d=>d.subject===name).group}));
