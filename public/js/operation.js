@@ -34,7 +34,7 @@
     });
     if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#3277df" stroke-width="3"/>';
     svg+=buckets.map((b,i)=>b.hasData?'<g class="chart-hit" role="button" tabindex="0" data-start="'+b.start+'" data-end="'+b.end+'" aria-label="'+b.start+' ~ '+b.end+' 추이와 수리이력 보기"><title>'+b.start+' ~ '+b.end+' · 가동률 '+pct(b.rate)+' · 계획 '+hours(b.plan)+' · 비가동 '+hours(b.down)+'</title><rect class="hit" x="'+(left+span*i)+'" y="10" width="'+span+'" height="245" fill="transparent"/></g>':'').join('');
-    return '<div class="chart-wrap"><h3>'+esc(title)+'</h3><div class="legend"><span><i></i>가동률</span><span><i class="plan"></i>계획시간(h)</span><span><i class="down"></i>비가동시간(h)</span></div><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="none" style="min-width:'+width+'px" role="group" aria-label="'+esc(title)+' 가동률과 시간 추이">'+svg+'</svg></div>';
+    return '<div class="chart-wrap"><h3>'+esc(title)+'</h3><div class="legend"><span><i></i>가동률</span><span><i class="plan"></i>계획시간(h)</span><span><i class="down"></i>비가동시간(h)</span></div><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="xMidYMid meet" style="min-width:'+width+'px;max-width:960px;margin-inline:auto" role="group" aria-label="'+esc(title)+' 가동률과 시간 추이">'+svg+'</svg></div>';
   }
   function dateControls(range=state.range){return '<label class="muted">기준 월 <input type="month" id="month-input" value="'+state.month+'"></label><span class="muted">'+range.start+' ~ '+range.end+'</span>';}
   function trend(){
