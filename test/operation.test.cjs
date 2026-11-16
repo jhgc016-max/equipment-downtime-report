@@ -49,5 +49,5 @@ test('analysis UI renders all tabs, drills into equipment, categories and weekly
   click({tab:'equipment'});click({monthView:''});assert.ok(el('tab-content').innerHTML.includes('MCT 호리젠탈'));
   click({equipment:'MCT 호리젠탈',process:'mach'});assert.ok(el('tab-content').innerHTML.includes('2행 · 원본 2건'));
   click({tab:'report'});assert.ok(el('tab-content').innerHTML.includes('규칙 기반 자동 분석'));click({},'print-report');assert.equal(printed,1);
-  click({tab:'trend'});click({unit:'month'});assert.ok(el('kpis').innerHTML.includes('2025-12-01 ~ 2026-11-30'));
+  click({tab:'trend'});click({unit:'month'});assert.ok(el('kpis').innerHTML.includes('2026-01-01 ~ 2026-12-31'));
 });

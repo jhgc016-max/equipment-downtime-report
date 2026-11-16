@@ -2,7 +2,8 @@
   'use strict';
   const C=window.OperationCore,D=window.Downtime,$=id=>document.getElementById(id),esc=D.esc;
   const KEY='downtime.operation.v1';let data,reference,staged=null,stagedWorkspace=null;
-  const state={tab:'trend',month:'2026-11',unit:'week',trendProcess:'all',range:{start:'2026-11-01',end:'2026-11-30'},selection:null,process:'all',equipment:'',code:'',reportDate:'2026-11-02',appendix:false};
+  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const state={tab:'trend',month:today.slice(0,7),unit:'week',trendProcess:'all',range:{start:'2026-11-01',end:'2026-11-30'},selection:null,process:'all',equipment:'',code:'',reportDate:'2026-11-02',appendix:false};
   const fmt=(v,d=1)=>v==null?'—':v.toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d});
   const hours=v=>fmt(v)+'h',pct=v=>fmt(v)+'%',period=()=>state.range.start+' ~ '+state.range.end;
   const empty=t=>'<div class="empty">'+esc(t||'등록 데이터 없음')+'</div>';
@@ -18,11 +19,11 @@
   }
   function chart(buckets,title='전체 종합',annual=false){
     if(!buckets.length)return empty();
-    const width=Math.max(900,buckets.length*(annual?130:90)),height=440,left=40,right=width-20,span=(right-left)/buckets.length,maxPlan=Math.max(1,...buckets.map(b=>b.plan||0));
+    const monthly=annual&&state.unit==='month',width=monthly?1320:Math.max(900,buckets.length*(annual?130:90)),height=440,left=40,right=width-20,span=(right-left)/buckets.length,maxPlan=Math.max(1,...buckets.map(b=>b.plan||0));
     let svg=[0,50,100].map(rate=>{const y=210-rate*1.5;return '<line x1="'+left+'" x2="'+right+'" y1="'+y+'" y2="'+y+'" stroke="#e4eaf1" stroke-dasharray="5 5"/><text x="5" y="'+(y+4)+'">'+rate+'%</text>';}).join('');
     let line=[];
     buckets.forEach((b,i)=>{
-      const x=left+span*(i+.5),displayDate=annual&&state.unit==='week'?C.addDays(b.start,3):b.start,label=b.end!==b.start&&state.unit==='week'?Number(displayDate.slice(5,7))+'월 '+['첫째주','둘째주','셋째주','넷째주','다섯째주'][Math.ceil(Number(displayDate.slice(8))/7)-1]:state.unit==='month'&&b.end!==b.start?b.start.slice(0,7):b.start.slice(5).replace('-','/');
+      const x=left+span*(i+.5),displayDate=annual&&state.unit==='week'?C.addDays(b.start,3):b.start,label=b.end!==b.start&&state.unit==='week'?Number(displayDate.slice(5,7))+'월 '+['첫째주','둘째주','셋째주','넷째주','다섯째주'][Math.ceil(Number(displayDate.slice(8))/7)-1]:state.unit==='month'&&b.end!==b.start?Number(b.start.slice(5,7))+'월':b.start.slice(5).replace('-','/');
       if(!b.hasData){if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#3277df" stroke-width="3"/>';line=[];svg+='<text x="'+x+'" y="160" text-anchor="middle">—</text>';}
       else{
         const y=210-Math.max(0,Math.min(100,b.rate||0))*1.5;line.push(x+','+y);
@@ -34,7 +35,7 @@
     });
     if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#3277df" stroke-width="3"/>';
     svg+=buckets.map((b,i)=>b.hasData?'<g class="chart-hit" role="button" tabindex="0" data-start="'+b.start+'" data-end="'+b.end+'" aria-label="'+b.start+' ~ '+b.end+' 추이와 수리이력 보기"><title>'+b.start+' ~ '+b.end+' · 가동률 '+pct(b.rate)+' · 계획 '+hours(b.plan)+' · 비가동 '+hours(b.down)+'</title><rect class="hit" x="'+(left+span*i)+'" y="10" width="'+span+'" height="425" fill="transparent"/></g>':'').join('');
-    return '<div class="chart-wrap '+(annual?'annual-chart':'')+'" tabindex="0" role="region" aria-label="'+esc(title)+'"><h3>'+esc(title)+'</h3><div class="legend"><span><i></i>가동률</span><span><i class="plan"></i>계획시간(h)</span><span><i class="down"></i>비가동시간(h)</span></div><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="xMidYMid meet" style="width:'+width+'px;min-width:'+width+'px;max-width:none;height:440px;margin-inline:auto" role="group" aria-label="'+esc(title)+' 가동률과 시간 추이">'+svg+'</svg></div>';
+    return '<div class="chart-wrap '+(annual?(monthly?'monthly-chart':'annual-chart'):'')+'" tabindex="0" role="region" aria-label="'+esc(title)+'"><h3>'+esc(title)+'</h3><div class="legend"><span><i></i>가동률</span><span><i class="plan"></i>계획시간(h)</span><span><i class="down"></i>비가동시간(h)</span></div><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="xMidYMid meet" style="'+(monthly?'width:100%;min-width:0;max-width:1320px;':'width:'+width+'px;min-width:'+width+'px;max-width:none;')+'height:440px;margin-inline:auto" role="group" aria-label="'+esc(title)+' 가동률과 시간 추이">'+svg+'</svg></div>';
   }
   function dateControls(range=state.range){return '<label class="muted">기준 월 <input type="month" id="month-input" value="'+state.month+'"></label><span class="muted">'+range.start+' ~ '+range.end+'</span>';}
   function trend(){
@@ -69,17 +70,18 @@
     if(data.legends)Object.keys(data.legends).forEach(p=>{C.codes[p]=data.legends[p];});summary();document.querySelectorAll('[data-tab]').forEach(b=>{const selected=b.dataset.tab===state.tab;b.setAttribute('aria-selected',selected);b.tabIndex=selected?0:-1;});
     $('tab-equipment').textContent='설비별 비교 ('+data.equipment.length+'대)';$('tab-content').setAttribute('aria-labelledby','tab-'+state.tab);
     $('tab-content').innerHTML=({trend,equipment:equipmentView,history:historyView,report:reportView}[state.tab])();
+    if(state.tab==='trend'&&state.unit!=='month'){const scroller=document.querySelector('.annual-chart'),svg=scroller?.querySelector('svg');if(svg){const year=state.month.slice(0,4),a=year+'-01-01',b=year+'-12-31',bs=C.buckets(data,a,b,state.unit),i=bs.findIndex(x=>x.start<=today&&x.end>=today);if(i>=0)scroller.scrollLeft=Math.max(0,(i+.5)/bs.length*svg.getBoundingClientRect().width-scroller.clientWidth/2);}}
     $('source').textContent=data.source+' · '+(data.coverage||'등록한 엑셀 자료를 현재 브라우저에서 집계합니다. 주야간 자료가 없으면 —로 표시합니다.');
   }
   function resetFilters(){state.process='all';state.equipment='';state.code='';}
-  function chooseRange(){state.range=C.range(state.month,state.unit);state.selection=null;}
-  function openHistory(process,equipment='',code=''){if(state.tab==='trend')state.range=C.range(state.month,state.unit);state.tab='history';state.process=process;state.equipment=equipment;state.code=code;render();}
+  function chooseRange(){state.range={start:state.month.slice(0,4)+'-01-01',end:state.month.slice(0,4)+'-12-31'};state.selection=null;}
+  function openHistory(process,equipment='',code=''){if(state.tab==='trend')chooseRange();state.tab='history';state.process=process;state.equipment=equipment;state.code=code;render();}
   document.addEventListener('click',e=>{
     const el=e.target.closest('button,[data-start]');if(!el||!data)return;
     if(el.dataset.trendProcess){state.trendProcess=el.dataset.trendProcess;render();}
     else if(el.dataset.tab){state.tab=el.dataset.tab;if(state.tab==='equipment'&&!data.imported&&!state.selection)state.range={start:state.month+'-01',end:C.monthEnd(state.month)};render();}
     else if(el.dataset.unit){state.unit=el.dataset.unit;chooseRange();resetFilters();render();}
-    else if(el.dataset.start){state.range={start:el.dataset.start,end:el.dataset.end};state.selection={start:C.monday(el.dataset.start),end:C.addDays(C.monday(el.dataset.start),6)};resetFilters();state.process=state.trendProcess;state.tab='history';render();}
+    else if(el.dataset.start){state.range={start:el.dataset.start,end:el.dataset.end};state.selection=state.unit==='month'?{...state.range}:{start:C.monday(el.dataset.start),end:C.addDays(C.monday(el.dataset.start),6)};resetFilters();state.process=state.trendProcess;state.tab='history';render();}
     else if(el.hasAttribute('data-equipment'))openHistory(el.dataset.process,el.dataset.equipment);
     else if(el.dataset.allProcess)openHistory(el.dataset.allProcess);
     else if(el.dataset.category){const [p,c]=el.dataset.category.split(':');if(c!=='?')openHistory(p,'',c);}
@@ -93,7 +95,7 @@
   document.addEventListener('keydown',e=>{const hit=e.target.closest('[data-start]');if(hit&&['Enter',' '].includes(e.key)){e.preventDefault();hit.dispatchEvent(new MouseEvent('click',{bubbles:true}));}if(e.target.matches('[data-tab]')&&['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const tabs=[...document.querySelectorAll('[data-tab]')],i=tabs.indexOf(e.target),next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[next].click();tabs[next].focus();}});
   $('menu-toggle').onclick=()=>{const open=$('sidebar').classList.toggle('open');$('menu-toggle').setAttribute('aria-expanded',open);};
   $('upload').onclick=()=>$('import-dialog').showModal();$('close-import').onclick=()=>$('import-dialog').close();
-  function save(next){localStorage.setItem(KEY,JSON.stringify(next));data=next;const latest=data.daily.map(d=>d.date).sort().at(-1);if(latest){state.month=latest.slice(0,7);state.reportDate=C.monday(latest);}chooseRange();resetFilters();render();}
+  function save(next){localStorage.setItem(KEY,JSON.stringify(next));data=next;const latest=data.daily.map(d=>d.date).sort().at(-1);if(latest){state.month=today.slice(0,7);state.reportDate=C.monday(latest);}chooseRange();resetFilters();render();}
   $('operation-file').onchange=async e=>{
     staged=null;stagedWorkspace=null;$('apply-import').disabled=true;const file=e.target.files[0];if(!file)return;$('import-preview').innerHTML='<p>엑셀 형식과 시간을 검증하고 있습니다…</p>';
     try{
@@ -110,7 +112,7 @@
   };
   $('apply-import').onclick=async()=>{if(!staged)return;try{$('apply-import').disabled=true;const merged=await window.OperationSync.saveData(staged);save(merged);$('import-dialog').close();notify('검증한 엑셀 자료를 반영했습니다. 동기화 상태는 위에서 확인하세요.');}catch(e){$('apply-import').disabled=false;$('import-preview').innerHTML+='<p class="toast error">'+esc(e.message)+'</p>';return;}};
   $('restore-reference').onclick=()=>{localStorage.removeItem(KEY);data=reference;state.month='2026-11';state.reportDate='2026-11-02';state.unit='week';chooseRange();resetFilters();render();$('import-dialog').close();notify('제공된 참고 운영자료로 전환했습니다.');};
-  async function load(){try{const response=await fetch('data/operation-reference.json',{cache:'no-cache'});if(!response.ok)throw new Error('운영자료를 불러오지 못했습니다 ('+response.status+')');reference=await response.json();data=reference;if(localStorage.getItem('operation.reset.20261116')!=='1'){for(const k of ['downtime.operation.v1','equipment.operation.workspace.v1','equipment.sync.v1:public-shared-v1','build-2611-11.scan'])localStorage.removeItem(k);localStorage.setItem('operation.reset.20261116','1');}try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved?.version===1&&saved.imported&&Array.isArray(saved.daily)&&!C.validate(saved).length){data=saved;const latest=data.daily.map(d=>d.date).sort().at(-1);if(latest){state.month=latest.slice(0,7);state.reportDate=C.monday(latest);chooseRange();}}}catch(e){notify('저장된 분석 자료를 읽지 못해 참고 운영자료를 표시합니다.',true);}render();}catch(e){$('tab-content').innerHTML=empty(e.message);notify('새로고침으로 다시 시도할 수 있습니다.',true);}}
+  async function load(){try{const response=await fetch('data/operation-reference.json',{cache:'no-cache'});if(!response.ok)throw new Error('운영자료를 불러오지 못했습니다 ('+response.status+')');reference=await response.json();data=reference;if(localStorage.getItem('operation.reset.20261116')!=='1'){for(const k of ['downtime.operation.v1','equipment.operation.workspace.v1','equipment.sync.v1:public-shared-v1','build-2611-11.scan'])localStorage.removeItem(k);localStorage.setItem('operation.reset.20261116','1');}try{const saved=JSON.parse(localStorage.getItem(KEY)||'null');if(saved?.version===1&&saved.imported&&Array.isArray(saved.daily)&&!C.validate(saved).length){data=saved;const latest=data.daily.map(d=>d.date).sort().at(-1);if(latest){state.month=today.slice(0,7);state.reportDate=C.monday(latest);chooseRange();}}}catch(e){notify('저장된 분석 자료를 읽지 못해 참고 운영자료를 표시합니다.',true);}render();}catch(e){$('tab-content').innerHTML=empty(e.message);notify('새로고침으로 다시 시도할 수 있습니다.',true);}}
   $('refresh').onclick=async()=>{notify('운영자료를 다시 불러오고 있습니다…');await load();if(data)notify('운영자료를 새로 불러왔습니다.');};
   window.addEventListener('storage',e=>{if(e.key===KEY)load();});
   window.addEventListener('operation-workspace-updated',async e=>{await load();if(e.detail?.message)notify(e.detail.message);});
