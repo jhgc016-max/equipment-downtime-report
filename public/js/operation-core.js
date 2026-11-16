@@ -5,7 +5,7 @@
   const addDays=(d,n)=>new Date(Date.parse(d+'T00:00:00Z')+n*86400000).toISOString().slice(0,10);
   function monday(d){const day=new Date(d+'T00:00:00Z').getUTCDay();return addDays(d,-((day+6)%7));}
   function monthEnd(m){return new Date(Date.UTC(+m.slice(0,4),+m.slice(5,7),0)).toISOString().slice(0,10);}
-  function range(month,unit){const end=monthEnd(month);if(unit==='month'){const d=new Date(month+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()-11);return {start:d.toISOString().slice(0,10),end};}if(unit==='week'){const anchor=monday(addDays(month+'-01',7));return {start:addDays(anchor,-35),end:addDays(anchor,6)};}return {start:month+'-01',end};}
+  function range(month,unit){const end=monthEnd(month);if(unit==='month'){const d=new Date(month+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()-11);return {start:d.toISOString().slice(0,10),end};}if(unit==='week'){const firstNext=addDays(end,1),nextMonday=monday(firstNext),firstFull=nextMonday<firstNext?addDays(nextMonday,7):nextMonday;return {start:monday(addDays(month+'-01',-1)),end:addDays(firstFull,6)};}return {start:month+'-01',end};}
   const overlaps=(r,a,b)=>r.start<=b&&(r.end||r.start)>=a;
   function sum(rows){if(!rows.length)return {hasData:false,plan:null,down:null,run:null,day:null,night:null,rate:null};const value=k=>rows.every(r=>r[k]!=null)?rows.reduce((s,r)=>s+r[k],0):null;const plan=value('plan'),run=value('run');return {hasData:true,plan,run,down:value('down'),day:value('day'),night:value('night'),rate:plan>0&&run!=null?run/plan*100:null};}
   function equipment(data,a,b){

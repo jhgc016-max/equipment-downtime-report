@@ -24,7 +24,7 @@ test('weighted calculations distinguish zero, missing data and original history 
   bad.daily[2]={...bad.daily[0]};assert.ok(C.validate(bad).some(e=>e.includes('중복')));
 });
 test('range transitions use six weeks, twelve months, Monday boundaries and absent days',()=>{
-  assert.deepEqual(C.range('2026-11','week'),{start:'2026-09-28',end:'2026-11-08'});
+  assert.deepEqual(C.range('2026-11','week'),{start:'2026-10-26',end:'2026-12-13'});
   assert.deepEqual(C.range('2026-11','month'),{start:'2025-12-01',end:'2026-11-30'});
   assert.equal(C.monday('2026-11-08'),'2026-11-02');
   const buckets=C.buckets(data,'2026-11-02','2026-11-08','day');assert.equal(buckets.length,7);assert.equal(buckets[0].down,18);assert.equal(buckets[4].hasData,false);
