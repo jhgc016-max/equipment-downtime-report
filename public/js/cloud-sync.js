@@ -97,6 +97,13 @@
     if (mount?.appendChild) { panel.className = 'panel operation-sync'; mount.appendChild(panel); }
     else document.querySelector('main .wrap').prepend(panel);
     if(localReader){panel.className='card reader-sync';panel.innerHTML='<p><span id="sync-status" role="status">클라우드 연결 중…</span></p><button class="btn" id="sync-now" type="button" disabled>연결 새로고침</button>';}
+    if (mount?.appendChild) {
+      panel.innerHTML = '<div><h2>클라우드 자료 사용</h2><p class="sub">공유된 최신 자료를 불러와 분석합니다.</p><p id="sync-status" role="status">연결 준비 중…</p></div><button id="sync-now" type="button" disabled>클라우드 자료 사용</button>';
+      $('sync-now').onclick = async () => {
+        try { say('클라우드 자료를 불러오는 중…'); const cloud = await readShared(); if (!cloud) { say('등록된 클라우드 자료가 없습니다.'); return; } adapter?.apply(cloud.payload); say('클라우드 자료를 사용합니다.'); }
+        catch { say('자료를 불러오지 못했습니다. 잠시 후 다시 시도하세요.'); }
+      };
+    }
     $('sync-now').disabled = true;
     if (!config.url || !config.publishableKey) { say('관리자가 Supabase 프로젝트를 연결하면 사용할 수 있습니다. 현재는 이 PC에서만 작업합니다.'); return; }
     try {
@@ -108,6 +115,7 @@
       }
       const lib = await sdk();
       client = lib.createClient(config.url, config.publishableKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+      if (mount?.appendChild) { $('sync-now').disabled = false; say('클라우드 자료를 불러올 수 있습니다.'); return; }
       if(localReader){
         $('sync-now').disabled=false;
         $('sync-now').onclick=()=>refreshReader().catch(e=>say(e.message));
