@@ -132,6 +132,20 @@
     } catch { say('동기화 초기화 실패. 공개 프로젝트 URL·키와 인터넷 연결을 확인하세요.'); }
   }
   window.CloudSync = {
+    async saveAnalysis(incoming) {
+      if(!client)throw new Error('클라우드 연결이 준비되지 않았습니다. 잠시 후 다시 등록하세요.');
+      for(let attempt=0;attempt<3;attempt++){
+        const cloud=await readShared();
+        const previous=cloud?.payload?window.OperationSync.decode(cloud.payload):{equipment:[],daily:[],history:[]};
+        const merged=window.OperationCore.mergeData(previous,incoming);
+        const errors=window.OperationCore.validate(merged);if(errors.length)throw new Error(errors.join('\n'));
+        const workspace=window.DowntimeSync.snapshot({version:1,settings:cloud?.payload?.settings||{},files:[{id:'operation-analysis',name:'가동 비가동 누적 자료',sheets:[{name:'분석자료',type:'operation-v1',aoa:[[JSON.stringify(merged)]]}]}]});
+        const {data,error}=await client.rpc('save_shared_downtime_workspace',{expected_revision:cloud?.revision||0,workspace});
+        if(error)throw new Error('클라우드 저장에 실패했습니다. 기존 자료는 유지됩니다. 다시 시도하세요.');
+        if(data?.ok){window.OperationSync.apply(workspace);say('등록 자료를 클라우드에 저장했습니다.');return merged;}
+      }
+      throw new Error('다른 PC에서 자료를 변경 중입니다. 잠시 후 다시 등록하세요.');
+    },
     register(value) { adapter = value; },
     changed() {
       if (applying || !connected) return;

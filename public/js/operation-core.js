@@ -53,5 +53,9 @@
     const history=(res.repairs?.list||[]).map((r,i)=>{const equip=r.equip.split(/[,;\n、]+/).map(s=>s.trim()).filter(Boolean);const process=equipment.find(e=>e.name===equip[0])?.process||D.autoGroup(equip[0]);const text=r.cause+' '+r.note;return {id:'import-'+i,start:r.startDate,end:r.endDate||r.startDate,process,equipment:equip,codes:Object.keys(codes[process]).filter(c=>text.includes(codes[process][c])),part:r.part,cause:r.cause,action:r.action,down:r.downHr,repair:r.repairHr};});
     return {version:1,imported:true,source:'등록한 엑셀 자료',equipment,daily,history,weeks:[]};
   }
-  return {names,codes,addDays,monday,monthEnd,range,overlaps,sum,equipment,aggregate,buckets,history,categories,validate,fromLegacy};
+  function mergeData(previous,incoming){
+    const merge=(a,b,key)=>{const map=new Map((a||[]).map(r=>[key(r),r]));for(const r of b||[])map.set(key(r),r);return [...map.values()];};
+    return {...previous,...incoming,imported:true,equipment:merge(previous.equipment,incoming.equipment,r=>r.name),daily:merge(previous.daily,incoming.daily,r=>r.date+'|'+r.equipment).sort((a,b)=>a.date.localeCompare(b.date)||a.equipment.localeCompare(b.equipment)),history:merge(previous.history,incoming.history,r=>r.process+'|'+r.start+'|'+r.id),legends:{...previous.legends,...incoming.legends}};
+  }
+  return {mergeData,names,codes,addDays,monday,monthEnd,range,overlaps,sum,equipment,aggregate,buckets,history,categories,validate,fromLegacy};
 });

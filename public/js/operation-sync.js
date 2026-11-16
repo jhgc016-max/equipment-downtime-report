@@ -8,10 +8,15 @@
     return {version:1,files:[],settings:{}};
   }
   function announce(message){window.dispatchEvent(new CustomEvent('operation-workspace-updated',{detail:{message}}));}
+  function decode(workspace){
+    const sheets=workspace.files.flatMap(f=>f.sheets),normalized=sheets.find(s=>s.type==='operation-v1');
+    if(normalized)return JSON.parse(normalized.aoa[0][0]);
+    const D=window.Downtime,C=window.OperationCore;
+    return window.CompanyWorkbook?.parse(sheets)||C.fromLegacy(D.analyze(D.merge(workspace.files.flatMap(f=>f.sheets.filter(s=>s.type!=='skip').map(s=>D.parseSheet(s.aoa,s.type,{file:f.name,sheet:s.name},workspace.settings)))),workspace.settings),D);
+  }
   function apply(value){
     const workspace=window.DowntimeSync.snapshot(value),D=window.Downtime,C=window.OperationCore;
-    const parts=workspace.files.flatMap(f=>f.sheets.filter(s=>s.type!=='skip').map(s=>D.parseSheet(s.aoa,s.type,{file:f.name,sheet:s.name},workspace.settings)));
-    const next=window.CompanyWorkbook?.parse(workspace.files.flatMap(f=>f.sheets))||C.fromLegacy(D.analyze(D.merge(parts),workspace.settings),D);
+    const next=decode(workspace);
     const errors=C.validate(next);
     localStorage.setItem(RAW,JSON.stringify(workspace));
     if(next.daily.length&&!errors.length){
@@ -19,5 +24,5 @@
     }else if(!workspace.files.length){localStorage.removeItem(ANALYSIS);announce('공유 자료가 비어 있어 참고 운영자료를 표시합니다.');}
     else announce('공유 자료를 불러왔습니다. 분석할 설비 기록이 없거나 확인할 값이 있습니다. 자료 관리에서 확인하세요.');
   }
-  window.OperationSync={get:read,apply,set(value){const workspace=window.DowntimeSync.snapshot(value);localStorage.setItem(RAW,JSON.stringify(workspace));window.CloudSync?.changed();}};
+  window.OperationSync={get:read,apply,decode,async saveData(incoming){return window.CloudSync.saveAnalysis(incoming);},set(value){const workspace=window.DowntimeSync.snapshot(value);localStorage.setItem(RAW,JSON.stringify(workspace));window.CloudSync?.changed();}};
 })();
