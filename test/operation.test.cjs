@@ -45,6 +45,9 @@ test('analysis UI renders all tabs, drills into equipment, categories and weekly
   const click=(dataset,id='')=>listeners.click({target:{closest:()=>({dataset,id,hasAttribute:k=>Object.hasOwn(dataset,k.replace(/^data-/, '').replace(/-([a-z])/g,(_,c)=>c.toUpperCase()))})}});
   assert.ok(el('tab-content').innerHTML.includes('전체 종합'));
   click({start:'2026-11-02',end:'2026-11-08'});assert.ok(el('tab-content').innerHTML.includes('33행 · 원본 17건'));
+  assert.ok(el('tab-content').innerHTML.includes('전체 33행 중 1–20행'));
+  click({historyPage:'2'});assert.ok(el('tab-content').innerHTML.includes('전체 33행 중 21–33행'));
+  click({historyPage:'1'});
   click({historyProcess:'mach'});assert.ok(el('tab-content').innerHTML.includes('NC 가공 일별 추이'));
   const nc=C.history(data,'2026-11-02','2026-11-08',{process:'mach'});assert.ok(el('tab-content').innerHTML.includes(nc.rows.length+'행 · 원본 '+nc.count+'건'));
   click({historyProcess:'weld'});assert.ok(el('tab-content').innerHTML.includes('용접 로봇 일별 추이'));
@@ -53,12 +56,16 @@ test('analysis UI renders all tabs, drills into equipment, categories and weekly
   click({historyProcess:'mach'});click({start:'2026-11-05',end:'2026-11-05'});
   const day=C.history(data,'2026-11-05','2026-11-05',{process:'mach'});
   assert.ok(el('tab-content').innerHTML.includes(day.rows.length+'행 · 원본 '+day.count+'건'));
-  assert.ok(!el('tab-content').innerHTML.includes('선택 기간 일별 가동·비가동 추이'));
+  assert.ok(el('tab-content').innerHTML.includes('선택 기간 일별 가동·비가동 추이'));assert.ok(el('tab-content').innerHTML.includes('11/02'));
   assert.ok(el('tab-content').innerHTML.includes('2026-11-05 ~ 2026-11-05'));
   click({tab:'trend'});click({start:'2026-11-02',end:'2026-11-08'});
   click({category:'mach:B'});assert.ok(el('tab-content').innerHTML.includes('2행 · 원본 2건'));assert.ok(el('tab-content').innerHTML.includes('3.0h'));
-  click({tab:'equipment'});click({monthView:''});assert.ok(el('tab-content').innerHTML.includes('MCT 호리젠탈'));
+  click({tab:'equipment'});assert.ok(el('tab-content').innerHTML.includes('MCT 호리젠탈'));
   click({equipment:'MCT 호리젠탈',process:'mach'});assert.ok(el('tab-content').innerHTML.includes('2행 · 원본 2건'));
   click({tab:'report'});assert.ok(el('tab-content').innerHTML.includes('규칙 기반 자동 분석'));click({},'print-report');assert.equal(printed,1);
   click({tab:'trend'});click({unit:'month'});assert.ok(el('kpis').innerHTML.includes('2026-01-01 ~ 2026-12-31'));
+  click({tab:'history'});listeners.change({target:{id:'history-period',value:'01'}});
+  assert.ok(el('tab-content').innerHTML.includes('2026-01-01 ~ 2026-01-31'));
+  listeners.change({target:{id:'history-period',value:'year'}});
+  assert.ok(el('tab-content').innerHTML.includes('2026-01-01 ~ 2026-12-31'));
 });
