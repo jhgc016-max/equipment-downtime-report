@@ -36,15 +36,19 @@ test('existing Excel parser adapter keeps full-precision minutes and does not in
   const next=C.fromLegacy(result,D);assert.ok(next.daily.length>0);assert.ok(C.validate(next).some(e=>e.includes('가동 + 비가동')));assert.equal(next.daily[0].day,result.kinds.equip.days[0].shift==='day'?next.daily[0].run:null);assert.equal(next.daily[0].plan,result.kinds.equip.days[0].plan/60);
 });
 test('analysis UI renders all tabs, drills into equipment, categories and weekly history, and prints report',async()=>{
-  const elements={},listeners={},storage=new Map();
+  const elements={},listeners={},storage=new Map(),windowEvents={},historyEntries=[];let historyIndex=0;
+  const browserHistory={replaceState(value){historyEntries[historyIndex]=JSON.parse(JSON.stringify(value));},pushState(value){historyEntries.splice(historyIndex+1);historyEntries[++historyIndex]=JSON.parse(JSON.stringify(value));},back(){if(historyIndex>0)windowEvents.popstate({state:historyEntries[--historyIndex]});},forward(){if(historyIndex<historyEntries.length-1)windowEvents.popstate({state:historyEntries[++historyIndex]});}};
   function el(id){return elements[id]||=( {id,innerHTML:'',textContent:'',dataset:{},value:'',setAttribute(){},classList:{toggle(){return true;}},showModal(){this.open=true;},close(){this.open=false;},focus(){}});}
   const tabs=['trend','equipment','history','report'].map(tab=>{const t=el('tab-'+tab);t.dataset.tab=tab;return t;});let printed=0;
   const document={getElementById:el,querySelectorAll:q=>q==='[data-tab]'?tabs:[],querySelector:()=>null,addEventListener:(event,fn)=>listeners[event]=fn};
-  const context={document,window:{OperationCore:C,Downtime:D,addEventListener(){},print(){printed++;}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},fetch:async()=>({ok:true,json:async()=>structuredClone(data)}),MouseEvent:class{},console};
+  const context={document,window:{OperationCore:C,Downtime:D,history:browserHistory,addEventListener(type,fn){windowEvents[type]=fn;},print(){printed++;}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},fetch:async()=>({ok:true,json:async()=>structuredClone(data)}),MouseEvent:class{},console};
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/operation.js'),'utf8'),context);await new Promise(setImmediate);
   const click=(dataset,id='')=>listeners.click({target:{closest:()=>({dataset,id,hasAttribute:k=>Object.hasOwn(dataset,k.replace(/^data-/, '').replace(/-([a-z])/g,(_,c)=>c.toUpperCase()))})}});
   assert.ok(el('tab-content').innerHTML.includes('전체 종합'));
   click({start:'2026-11-02',end:'2026-11-08'});assert.ok(el('tab-content').innerHTML.includes('33행 · 원본 17건'));
+  assert.ok(!el('tab-content').innerHTML.includes('선택 기간 전체 보기'));
+  browserHistory.back();assert.ok(el('tab-content').innerHTML.includes('그래프 분류'));
+  browserHistory.forward();assert.ok(el('tab-content').innerHTML.includes('33행 · 원본 17건'));
   assert.ok(el('tab-content').innerHTML.includes('전체 33행 중 1–20행'));
   click({historyPage:'2'});assert.ok(el('tab-content').innerHTML.includes('전체 33행 중 21–33행'));
   click({historyPage:'1'});
@@ -68,4 +72,13 @@ test('analysis UI renders all tabs, drills into equipment, categories and weekly
   assert.ok(el('tab-content').innerHTML.includes('2026-01-01 ~ 2026-01-31'));
   listeners.change({target:{id:'history-period',value:'year'}});
   assert.ok(el('tab-content').innerHTML.includes('2026-01-01 ~ 2026-12-31'));
+  assert.ok(el('tab-content').innerHTML.includes('선택 기간 월별 가동·비가동 추이'));
+  click({start:'2026-11-01',end:'2026-11-30',chartUnit:'month'});
+  assert.ok(el('tab-content').innerHTML.includes('선택 기간 주별 가동·비가동 추이'));
+  click({start:'2026-11-02',end:'2026-11-08',chartUnit:'week'});
+  assert.ok(el('tab-content').innerHTML.includes('선택 기간 일별 가동·비가동 추이'));
+  click({start:'2026-11-05',end:'2026-11-05',chartUnit:'day'});
+  assert.ok(el('tab-content').innerHTML.includes('2026-11-05 ~ 2026-11-05'));
+  browserHistory.back();assert.ok(el('tab-content').innerHTML.includes('2026-11-02 ~ 2026-11-08'));
+  browserHistory.back();assert.ok(el('tab-content').innerHTML.includes('선택 기간 주별 가동·비가동 추이'));
 });
