@@ -57,7 +57,8 @@
     }
     const legend=data.legends?.[process];if(legend)ed.put(14,'B','범례) '+Object.entries(legend).map(([c,n])=>c+': '+n).join(', '));
    }else{
-    const records=history.filter(h=>h.process===process),last=Math.max(sn===3?47:38,5+records.length);
+    const core=typeof module==='object'&&module.exports?require('./operation-core.js'):window.OperationCore;
+    const records=history.filter(h=>h.process===process).map(h=>({...h,repair:core.repairHours(h,data.legends)})),last=Math.max(sn===3?47:38,5+records.length);
     for(let r=5;r<=last;r++)for(let c=2;c<=17;c++)ed.put(r,col(c),'',5);
     records.forEach((h,i)=>{const values=[i+1,h.start,h.end,h.equipment.join('\n'),h.part,h.codes.join(', '),h.range||'',h.down==null?'':h.down*60,h.repair==null?'':h.repair*60,'',h.cause,h.action,'','',h.status||'',h.note||''];values.forEach((v,j)=>ed.put(5+i,col(j+2),v,5));});
     ed.put(last,'B',records.length+'건');ed.put(last,'C','합계');ed.put(last,'I',records.reduce((s,h)=>s+(h.down||0)*60,0));ed.put(last,'J',records.reduce((s,h)=>s+(h.repair||0)*60,0));

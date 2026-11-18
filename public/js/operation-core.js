@@ -24,7 +24,7 @@
   function buckets(data,a,b,unit,process='all'){const out=[];let cursor=unit==='week'?monday(a):unit==='month'?a.slice(0,7)+'-01':a;while(cursor<=b){const end=unit==='week'?addDays(cursor,6):unit==='month'?monthEnd(cursor.slice(0,7)):cursor;out.push({start:cursor,end,...aggregate(data,cursor,end,process)});cursor=addDays(end,1);}return out;}
   function history(data,a,b,filter={}){
     const records=data.history.filter(r=>overlaps(r,a,b));
-    const rows=records.flatMap(r=>r.equipment.map(e=>({...r,equipmentName:e,allocated:r.down==null?null:r.down/r.equipment.length,repairAllocated:r.repair==null?null:r.repair/r.equipment.length}))).filter(r=>(!filter.process||filter.process==='all'||r.process===filter.process)&&(!filter.equipment||r.equipmentName===filter.equipment)&&(!filter.code||r.codes.includes(filter.code)));
+    const rows=records.flatMap(r=>r.equipment.map(e=>({...r,equipmentName:e,allocated:r.down==null?null:r.down/r.equipment.length,repairAllocated:repairHours(r,data.legends)==null?null:repairHours(r,data.legends)/r.equipment.length}))).filter(r=>(!filter.process||filter.process==='all'||r.process===filter.process)&&(!filter.equipment||r.equipmentName===filter.equipment)&&(!filter.code||r.codes.includes(filter.code)));
     return {rows,count:new Set(rows.map(r=>r.id)).size,total:rows.reduce((s,r)=>s+(r.allocated||0),0)};
   }
   function categories(data,a,b,process){
@@ -69,5 +69,9 @@
     });
     return {data:{...data,daily,history},dailyCount:data.daily.length-daily.length,historyCount:affected};
   }
-  return {deleteDate,mergeData,names,codes,addDays,monday,monthEnd,range,overlaps,sum,equipment,aggregate,buckets,history,categories,validate,fromLegacy};
+  function repairHours(record,legends){
+    const labels=legends?.[record.process]||codes[record.process]||{};
+    return record.codes.some(code=>String(labels[code]||'').replace(/\s/g,'')==='장비고장')?record.down:record.repair;
+  }
+  return {repairHours,deleteDate,mergeData,names,codes,addDays,monday,monthEnd,range,overlaps,sum,equipment,aggregate,buckets,history,categories,validate,fromLegacy};
 });
