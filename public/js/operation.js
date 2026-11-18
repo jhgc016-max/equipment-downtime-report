@@ -57,7 +57,7 @@
     out+='<div class="segment" style="width:fit-content;margin-bottom:16px" aria-label="이력 분류">'+[['all','종합'],['mach','NC'],['weld','로봇']].map(([p,t])=>'<button data-history-process="'+p+'" class="'+(state.process===p?'selected':'')+'" aria-pressed="'+(state.process===p)+'">'+t+'</button>').join('')+'</div>';
     {out+='<div class="panel-head"><h3>선택 기간 일별 가동·비가동 추이</h3>'+(state.selection?'<button data-week-all>선택 기간 전체 보기</button>':'')+'</div>'+chart(C.buckets(data,(state.selection||state.range).start,(state.selection||state.range).end,'day',state.process),state.process==='all'?'종합 일별 추이':C.names[state.process]+' 일별 추이')+categoryView(state.range.start,state.range.end,state.process);}
     out+=reconciliation();
-    out+='<div class="controls"><label>비가동 범례 <select id="filter-code"><option value="">전체</option>'+(state.process==='all'?'':Object.entries(C.codes[state.process]).map(([c,n])=>'<option value="'+c+'" '+(state.code===c?'selected':'')+'>'+c+' '+n+'</option>').join(''))+'</select></label><label>설비 <select id="filter-equipment"><option value="">전체</option>'+equips.map(e=>'<option '+(state.equipment===e.name?'selected':'')+' value="'+esc(e.name)+'">'+esc(e.name)+'</option>').join('')+'</select></label></div><div class="panel-head" style="margin-top:20px"><div><strong>수리·조치 이력</strong><p class="muted">'+h.rows.length+'행 · 원본 '+h.count+'건 · 비가동시간이 없는 수리 포함</p></div><strong class="orange">표시 비가동 합계 '+hours(h.total)+'</strong></div>'+(h.rows.length?historyTable(h.rows):empty('선택한 조건에 해당하는 수리·조치 이력이 없습니다.'))+'<p class="muted">복수 설비 이력의 비가동·수리시간은 각 설비에 균등 배분합니다. 표시 행 수는 원본 발생 건수와 다릅니다.</p>';
+    out+='<div class="controls"><label>비가동 범례 <select id="filter-code"><option value="">전체</option>'+(state.process==='all'?'':Object.entries(C.codes[state.process]).map(([c,n])=>'<option value="'+c+'" '+(state.code===c?'selected':'')+'>'+c+' '+n+'</option>').join(''))+'</select></label><label>설비 <select id="filter-equipment"><option value="">전체</option>'+equips.map(e=>'<option '+(state.equipment===e.name?'selected':'')+' value="'+esc(e.name)+'">'+esc(e.name)+'</option>').join('')+'</select></label></div><div class="panel-head" style="margin-top:20px"><div><strong>수리·조치 이력</strong> <button data-manual-history class="primary">+ 직접 입력</button><p class="muted">'+h.rows.length+'행 · 원본 '+h.count+'건 · 비가동시간이 없는 수리 포함</p></div><strong class="orange">표시 비가동 합계 '+hours(h.total)+'</strong></div>'+(h.rows.length?historyTable(h.rows):empty('선택한 조건에 해당하는 수리·조치 이력이 없습니다.'))+'<p class="muted">복수 설비 이력의 비가동·수리시간은 각 설비에 균등 배분합니다. 표시 행 수는 원본 발생 건수와 다릅니다.</p>';
     return out;
   }
   function reportView(){
@@ -80,7 +80,8 @@
   function openHistory(process,equipment='',code=''){if(state.tab==='trend')chooseRange();state.tab='history';state.process=process;state.equipment=equipment;state.code=code;render();}
   document.addEventListener('click',e=>{
     const el=e.target.closest('button,[data-start]');if(!el||!data)return;
-    if(el.dataset.historyProcess){state.process=el.dataset.historyProcess;state.equipment='';state.code='';render();}
+    if(el.hasAttribute('data-manual-history')){window.ManualHistory.open(data);}
+    else if(el.dataset.historyProcess){state.process=el.dataset.historyProcess;state.equipment='';state.code='';render();}
     else if(el.dataset.trendProcess){state.trendProcess=el.dataset.trendProcess;render();}
     else if(el.dataset.tab){state.tab=el.dataset.tab;if(state.tab==='equipment'&&!data.imported&&!state.selection)state.range={start:state.month+'-01',end:C.monthEnd(state.month)};render();}
     else if(el.dataset.unit){state.unit=el.dataset.unit;chooseRange();resetFilters();render();}
@@ -119,5 +120,6 @@
   $('refresh').onclick=async()=>{notify('운영자료를 다시 불러오고 있습니다…');await load();if(data)notify('운영자료를 새로 불러왔습니다.');};
   window.addEventListener('storage',e=>{if(e.key===KEY)load();});
   window.addEventListener('operation-workspace-updated',async e=>{await load();if(e.detail?.message)notify(e.detail.message);});
+  window.addEventListener('manual-history-saved',async e=>{await load();state.tab='history';state.range={start:e.detail.start,end:e.detail.end};state.selection=null;state.process=e.detail.process;state.equipment='';state.code='';render();notify('수리·조치 이력을 클라우드에 저장했습니다.');});
   await load();
 })();

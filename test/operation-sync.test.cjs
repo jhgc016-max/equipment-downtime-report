@@ -20,5 +20,9 @@ test('analysis sync consumes shared Excel and stages uploads without publishing 
   context.window.OperationSync.apply(workspace);
   const cached=JSON.parse(storage.get('downtime.operation.v1'));assert.equal(cached.equipment[0].name,'150NC');assert.equal(cached.daily[0].date,'2026-11-02');assert.equal(events.at(-1).type,'operation-workspace-updated');assert.equal(changes,0);
   context.window.OperationSync.set(workspace);assert.equal(changes,1);assert.equal(context.window.OperationSync.get().files[0].id,'a');
+  const manual={version:1,imported:true,equipment:[{name:'135NC',process:'mach'}],daily:[],history:[{id:'manual-test',process:'mach',start:'2026-11-18',end:'2026-11-18',equipment:['135NC'],codes:['B'],part:'펌프',cause:'누유',action:'패킹 교체',down:0,repair:1}]};
+  const merged=C.mergeData(decoded,manual);assert.equal(merged.daily.length,decoded.daily.length);assert.equal(merged.history.length,2);
+  context.window.OperationSync.apply({version:1,settings:{},files:[{id:'manual',name:'manual',sheets:[{name:'analysis',type:'operation-v1',aoa:[[JSON.stringify(manual)]]}]}]});
+  assert.equal(JSON.parse(storage.get('downtime.operation.v1')).history[0].action,'패킹 교체');
   context.window.OperationSync.apply({version:1,settings:{},files:[]});assert.equal(storage.has('downtime.operation.v1'),false);
 });
