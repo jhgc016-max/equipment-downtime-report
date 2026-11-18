@@ -107,6 +107,16 @@
     out.raw = p.raw || null;
     out.sourcePage = p.sourcePage || null;
     out.reviews = p.reviews || [];
+    var ordered=out.work.map(function(r){return {row:r,down:false};}).concat(out.downtime.map(function(r){return {row:r,down:true};})).sort(function(a,b){return a.row.no-b.row.no;});
+    function fill(row,key,value,reason){if(!row[key]&&time(value)){row[key]=time(value);out.reviews.push({field:(out.downtime.indexOf(row)>=0?'downtime':'work')+'['+row.no+'].'+key,reason:'자동 입력: '+reason+' ('+row[key]+')'});}}
+    ordered.forEach(function(entry,i){
+      var r=entry.row,prev=ordered[i-1],next=ordered[i+1];
+      if(entry.down&&prev&&next&&prev.row.no<r.no&&next.row.no>r.no){
+        var st=time(r.start)||time(prev.row.end),en=time(r.end)||time(next.row.start);
+        if(st&&en&&minutes(en)>minutes(st)){fill(r,'start',st,'윗줄 종료시간');fill(r,'end',en,'아랫줄 시작시간');}
+      }
+      if(!entry.down&&i===ordered.length-1&&time(r.start)&&time(out.end)&&minutes(out.end)>minutes(r.start))fill(r,'end',out.end,'당일 가동종료시간');
+    });
     // Keep every extracted row, including unreadable rows, for human review.
     return out;
   }
@@ -167,7 +177,9 @@
         if (!d.code && !d.rawCode && !d.start && !d.end && !d.note) return;        // 빈 줄(손 입력 틀)
         var c = d.code, name = legendName[c] || '';
         if (map) name = Object.keys(map).filter(function (label) { return map[label] === c; })[0] || '';
-        rows.push([p.equipment, group, p.worker, p.date, shift, '비가동', c, d.start, d.end, dur(d.start, d.end), (name ? name + (d.note ? ' — ' : '') : '') + d.note]); any = true;
+        var note=clean(d.note);
+        if(name&&note.indexOf(name)===0)note=note.slice(name.length).replace(/^\s*[—:·-]?\s*/,'');
+        rows.push([p.equipment, group, p.worker, p.date, shift, '비가동', c, d.start, d.end, dur(d.start, d.end), note]); any = true;
       });
       p.work.forEach(function (w) {
         if (!w.start && !w.end) return;
