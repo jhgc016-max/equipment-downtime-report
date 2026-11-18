@@ -50,6 +50,12 @@ test('analysis UI renders all tabs, drills into equipment, categories and weekly
   click({historyProcess:'weld'});assert.ok(el('tab-content').innerHTML.includes('용접 로봇 일별 추이'));
   const robot=C.history(data,'2026-11-02','2026-11-08',{process:'weld'});assert.ok(el('tab-content').innerHTML.includes(robot.rows.length+'행 · 원본 '+robot.count+'건'));
   click({historyProcess:'all'});assert.ok(el('tab-content').innerHTML.includes('33행 · 원본 17건'));
+  click({historyProcess:'mach'});click({start:'2026-11-05',end:'2026-11-05'});
+  const day=C.history(data,'2026-11-05','2026-11-05',{process:'mach'});
+  assert.ok(el('tab-content').innerHTML.includes(day.rows.length+'행 · 원본 '+day.count+'건'));
+  assert.ok(!el('tab-content').innerHTML.includes('선택 기간 일별 가동·비가동 추이'));
+  assert.ok(el('tab-content').innerHTML.includes('2026-11-05 ~ 2026-11-05'));
+  click({tab:'trend'});click({start:'2026-11-02',end:'2026-11-08'});
   click({category:'mach:B'});assert.ok(el('tab-content').innerHTML.includes('2행 · 원본 2건'));assert.ok(el('tab-content').innerHTML.includes('3.0h'));
   click({tab:'equipment'});click({monthView:''});assert.ok(el('tab-content').innerHTML.includes('MCT 호리젠탈'));
   click({equipment:'MCT 호리젠탈',process:'mach'});assert.ok(el('tab-content').innerHTML.includes('2행 · 원본 2건'));
