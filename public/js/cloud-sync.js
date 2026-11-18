@@ -98,7 +98,7 @@
     else document.querySelector('main .wrap').prepend(panel);
     if(localReader){panel.className='card reader-sync';panel.innerHTML='<p><span id="sync-status" role="status">클라우드 연결 중…</span></p><button class="btn" id="sync-now" type="button" disabled>연결 새로고침</button>';}
     if (mount?.appendChild) {
-      panel.innerHTML = '<div><h2>클라우드 자료 사용</h2><p class="sub">공유된 최신 자료를 불러와 분석합니다.</p><p id="sync-status" role="status">연결 준비 중…</p></div><button id="sync-now" type="button" disabled>클라우드 자료 사용</button>';
+      panel.innerHTML = '<div><h2>클라우드 자료 사용</h2><p class="sub">공유된 최신 자료를 불러와 분석합니다.</p><p id="sync-status" role="status">연결 준비 중…</p></div><div class="sync-actions"><button id="sync-now" type="button" disabled>클라우드 자료 사용</button><button id="delete-date-data" type="button">날짜 데이터 삭제</button><button id="reset-cloud-data" class="danger" type="button">클라우드 자료 전체 초기화</button></div>';
       $('sync-now').onclick = async () => {
         try { say('클라우드 자료를 불러오는 중…'); const cloud = await readShared(); if (!cloud) { say('등록된 클라우드 자료가 없습니다.'); return; } adapter?.apply(cloud.payload); say('클라우드 자료를 사용합니다.'); }
         catch { say('자료를 불러오지 못했습니다. 잠시 후 다시 시도하세요.'); }
@@ -132,6 +132,37 @@
     } catch { say('동기화 초기화 실패. 공개 프로젝트 URL·키와 인터넷 연결을 확인하세요.'); }
   }
   window.CloudSync = {
+    async previewWorkspaceReset(){
+      if(!client)throw new Error('클라우드 연결 준비 후 다시 시도하세요.');
+      const cloud=await readShared();if(!cloud)throw new Error('초기화할 클라우드 자료가 없습니다.');
+      const current=window.OperationSync.decode(cloud.payload);
+      return {revision:cloud.revision,equipmentCount:current.equipment.length,dailyCount:current.daily.length,historyCount:current.history.length};
+    },
+    async confirmWorkspaceReset(preview){
+      if(!client)throw new Error('클라우드에 연결되어 있지 않습니다.');
+      const workspace={version:1,files:[],settings:{}};
+      const {data,error}=await client.rpc('save_shared_downtime_workspace',{expected_revision:preview.revision,workspace});
+      if(error)throw new Error('초기화에 실패했습니다. 다시 확인 후 시도하세요.');
+      if(!data?.ok)throw new Error('다른 PC에서 자료가 변경되었습니다. 초기화 대상을 다시 확인하세요.');
+      localStorage.removeItem('equipment.sync.v1:public-shared-v1');
+      localStorage.removeItem('build-2611-11.settings');
+      localStorage.removeItem('build-2611-11.scan');
+      window.OperationSync.apply(workspace);say('클라우드 자료를 전체 초기화했습니다.');
+    },
+    async previewDateDeletion(date,process,equipment){
+      if(!client)throw new Error('클라우드 연결 준비 후 다시 시도하세요.');
+      const cloud=await readShared();if(!cloud)throw new Error('저장된 클라우드 자료가 없습니다.');
+      const result=window.OperationCore.deleteDate(window.OperationSync.decode(cloud.payload),date,process,equipment);
+      return {...result,revision:cloud.revision,settings:cloud.payload.settings};
+    },
+    async confirmDateDeletion(preview){
+      if(!client)throw new Error('클라우드에 연결되어 있지 않습니다.');
+      const workspace=window.DowntimeSync.snapshot({version:1,settings:preview.settings,files:[{id:'operation-analysis',name:'가동 비가동 누적 자료',sheets:[{name:'분석자료',type:'operation-v1',aoa:[[JSON.stringify(preview.data)]]}]}]});
+      const {data,error}=await client.rpc('save_shared_downtime_workspace',{expected_revision:preview.revision,workspace});
+      if(error)throw new Error('삭제에 실패했습니다. 다시 조회 후 시도하세요.');
+      if(!data?.ok)throw new Error('다른 PC에서 자료가 변경되었습니다. 삭제 대상을 다시 확인하세요.');
+      window.OperationSync.apply(workspace);say('선택한 날짜 자료를 삭제했습니다.');
+    },
     async saveAnalysis(incoming) {
       if(!client)throw new Error('클라우드 연결이 준비되지 않았습니다. 잠시 후 다시 등록하세요.');
       for(let attempt=0;attempt<3;attempt++){

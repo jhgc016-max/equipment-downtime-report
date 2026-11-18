@@ -26,7 +26,7 @@
     const next=decode(workspace);
     const errors=C.validate(next);
     localStorage.setItem(RAW,JSON.stringify(workspace));
-    if((next.daily.length||next.history.length)&&!errors.length){
+    if((next.daily.length||next.history.length||next.equipment.length)&&!errors.length){
       next.source='공개 자료 자동 동기화';localStorage.setItem(ANALYSIS,JSON.stringify(next));announce('공유 자료를 분석 화면에 반영했습니다.');
     }else if(!workspace.files.length){localStorage.removeItem(ANALYSIS);announce('공유 자료가 비어 있어 참고 운영자료를 표시합니다.');}
     else announce('공유 자료를 불러왔습니다. 분석할 설비 기록이 없거나 확인할 값이 있습니다. 자료 관리에서 확인하세요.');

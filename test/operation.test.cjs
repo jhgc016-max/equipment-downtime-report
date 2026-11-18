@@ -56,7 +56,7 @@ test('analysis UI renders all tabs, drills into equipment, categories and weekly
   click({historyProcess:'mach'});click({start:'2026-11-05',end:'2026-11-05'});
   const day=C.history(data,'2026-11-05','2026-11-05',{process:'mach'});
   assert.ok(el('tab-content').innerHTML.includes(day.rows.length+'행 · 원본 '+day.count+'건'));
-  assert.ok(el('tab-content').innerHTML.includes('선택 기간 일별 가동·비가동 추이'));assert.ok(el('tab-content').innerHTML.includes('11/02'));
+  assert.ok(el('tab-content').innerHTML.includes('선택 기간 일별 가동·비가동 추이'));assert.ok(el('tab-content').innerHTML.includes('11/05'));assert.ok(!el('tab-content').innerHTML.includes('11/02'));
   assert.ok(el('tab-content').innerHTML.includes('2026-11-05 ~ 2026-11-05'));
   click({tab:'trend'});click({start:'2026-11-02',end:'2026-11-08'});
   click({category:'mach:B'});assert.ok(el('tab-content').innerHTML.includes('2행 · 원본 2건'));assert.ok(el('tab-content').innerHTML.includes('3.0h'));

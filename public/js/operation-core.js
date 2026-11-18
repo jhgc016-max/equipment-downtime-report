@@ -57,5 +57,17 @@
     const merge=(a,b,key)=>{const map=new Map((a||[]).map(r=>[key(r),r]));for(const r of b||[])map.set(key(r),r);return [...map.values()];};
     return {...previous,...incoming,imported:true,equipment:merge(previous.equipment,incoming.equipment,r=>r.name),daily:merge(previous.daily,incoming.daily,r=>r.date+'|'+r.equipment).sort((a,b)=>a.date.localeCompare(b.date)||a.equipment.localeCompare(b.equipment)),history:merge(previous.history,incoming.history,r=>r.process+'|'+r.start+'|'+r.id),legends:{...previous.legends,...incoming.legends}};
   }
-  return {mergeData,names,codes,addDays,monday,monthEnd,range,overlaps,sum,equipment,aggregate,buckets,history,categories,validate,fromLegacy};
+  function deleteDate(data,date,process='all',equipment=''){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date)throw Error('삭제할 날짜를 확인하세요.');
+    const match=p=>process==='all'||p===process;
+    const daily=data.daily.filter(r=>!(r.date===date&&match(r.process)&&(!equipment||r.equipment===equipment)));
+    let affected=0;const history=data.history.flatMap(r=>{
+      if(r.start!==date||!match(r.process)||equipment&&!r.equipment.includes(equipment))return [r];
+      affected++;if(!equipment||r.equipment.length===1)return [];
+      const remaining=r.equipment.filter(e=>e!==equipment),ratio=remaining.length/r.equipment.length;
+      return [{...r,equipment:remaining,down:r.down==null?null:r.down*ratio,repair:r.repair==null?null:r.repair*ratio}];
+    });
+    return {data:{...data,daily,history},dailyCount:data.daily.length-daily.length,historyCount:affected};
+  }
+  return {deleteDate,mergeData,names,codes,addDays,monday,monthEnd,range,overlaps,sum,equipment,aggregate,buckets,history,categories,validate,fromLegacy};
 });

@@ -6,6 +6,26 @@ function environment(config,{localReader=false,confirm=()=>true}={}){const eleme
  return {el,context,intervals,client,seed(value){db={revision:1,payload:structuredClone(value)};},get db(){return db;},get writes(){return writes;},get working(){return working;},remoteChange(value){db={revision:db.revision+1,payload:value};},tick:async()=>{for(let i=0;i<10;i++)await new Promise(setImmediate);}};
 }
 test('no Supabase project means no attempted login or false online status',async()=>{const e=environment({url:'',publishableKey:''});await e.tick();assert.equal(e.el('sync-now').disabled,true);assert.ok(e.el('sync-status').textContent.includes('프로젝트를 연결'));assert.equal(e.writes,0);});
+test('whole workspace reset uses preview revision and clears all files and settings',async()=>{
+ const e=environment({url:'https://offline.supabase.co',publishableKey:'sb_publishable_offline_test'});await e.tick();
+ let applied=null;const removed=[];e.context.localStorage.removeItem=k=>removed.push(k);
+ e.context.window.OperationSync={decode:()=>({equipment:[{name:'A'}],daily:[{}],history:[{}]}),apply:v=>applied=v};
+ e.seed({version:1,files:[],settings:{target:85}});
+ const stale=await e.context.window.CloudSync.previewWorkspaceReset();assert.equal(stale.dailyCount,1);
+ e.remoteChange({version:1,files:[],settings:{target:90}});await assert.rejects(()=>e.context.window.CloudSync.confirmWorkspaceReset(stale),/다른 PC/);assert.equal(applied,null);
+ const fresh=await e.context.window.CloudSync.previewWorkspaceReset();await e.context.window.CloudSync.confirmWorkspaceReset(fresh);
+ assert.equal(applied.files.length,0);assert.equal(Object.keys(applied.settings).length,0);assert.equal(e.db.payload.files.length,0);assert.ok(removed.includes('equipment.sync.v1:public-shared-v1'));
+});
+test('date deletion saves exactly the preview revision and rejects concurrent changes',async()=>{
+ const e=environment({url:'https://offline.supabase.co',publishableKey:'sb_publishable_offline_test'});await e.tick();
+ const records={equipment:[{name:'A',process:'mach'}],daily:[{date:'2026-11-18',equipment:'A',process:'mach',plan:8,run:8,down:0},{date:'2026-11-19',equipment:'A',process:'mach',plan:8,run:8,down:0}],history:[]};
+ let applied=null;e.context.window.OperationCore=require('../public/js/operation-core.js');e.context.window.OperationSync={decode:()=>structuredClone(records),apply:v=>applied=v};
+ e.seed({version:1,files:[],settings:{}});
+ const stale=await e.context.window.CloudSync.previewDateDeletion('2026-11-18','mach','');assert.equal(stale.dailyCount,1);
+ e.remoteChange({version:1,files:[],settings:{}});await assert.rejects(()=>e.context.window.CloudSync.confirmDateDeletion(stale),/다른 PC/);assert.equal(applied,null);
+ const fresh=await e.context.window.CloudSync.previewDateDeletion('2026-11-18','mach','');await e.context.window.CloudSync.confirmDateDeletion(fresh);
+ const saved=JSON.parse(applied.files[0].sheets[0].aoa[0][0]);assert.equal(saved.daily.length,1);assert.equal(saved.daily[0].date,'2026-11-19');
+});
 test('no auth API: automatic public connection, first upload, autosave, remote pull and reviewed scan append',async()=>{const e=environment({url:'https://offline.supabase.co',publishableKey:'sb_publishable_offline_test'});await e.tick();assert.equal(e.writes,0);assert.equal(e.el('sync-conflict').hidden,false);await e.el('sync-use-local').onclick();assert.equal(e.writes,1);e.working.settings.target=90;e.context.window.CloudSync.changed();await e.tick();assert.equal(e.db.payload.settings.target,90);const remote=structuredClone(e.db.payload);remote.files[0].name='other PC';e.remoteChange(remote);await e.intervals.at(-1)();await e.tick();assert.equal(e.working.files[0].name,'other PC');await e.context.window.CloudSync.addScan({id:'scan2',name:'reviewed',aoa:[['설비','코드'],['150NC','C']]});assert.equal(e.db.payload.files.length,2);assert.equal(e.db.payload.files[1].sheets[0].aoa[1][1],'C');});
 
 test('local reader cancels duplicate-date replacement without writes, then replaces after confirmation',async()=>{

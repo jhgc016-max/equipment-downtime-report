@@ -92,7 +92,7 @@
     else if(el.dataset.trendProcess){state.trendProcess=el.dataset.trendProcess;render();}
     else if(el.dataset.tab){state.tab=el.dataset.tab;if(state.tab==='history'){chooseRange();state.historyPage=1;}if(state.tab==='equipment'&&!data.imported&&!state.selection)state.range={start:state.month+'-01',end:C.monthEnd(state.month)};render();}
     else if(el.dataset.unit){state.unit=el.dataset.unit;chooseRange();resetFilters();render();}
-    else if(el.dataset.start){const process=state.tab==='history'?state.process:state.trendProcess;const graphRange=state.tab==='history'?(state.selection||state.range):{start:C.monday(el.dataset.start),end:C.addDays(C.monday(el.dataset.start),6)};state.range={start:el.dataset.start,end:el.dataset.end};state.selection=el.dataset.start===el.dataset.end?{...graphRange}:{...state.range};resetFilters();state.process=process;state.tab='history';render();}
+    else if(el.dataset.start){const process=state.tab==='history'?state.process:state.trendProcess;state.range={start:el.dataset.start,end:el.dataset.end};state.selection={...state.range};resetFilters();state.process=process;state.tab='history';render();}
     else if(el.hasAttribute('data-equipment'))openHistory(el.dataset.process,el.dataset.equipment);
     else if(el.dataset.allProcess)openHistory(el.dataset.allProcess);
     else if(el.dataset.category){const [p,c]=el.dataset.category.split(':');if(c!=='?')openHistory(p,'',c);}
