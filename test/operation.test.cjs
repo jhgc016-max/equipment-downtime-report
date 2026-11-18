@@ -65,6 +65,14 @@ test('analysis UI renders all tabs, drills into equipment, categories and weekly
   click({tab:'trend'});click({start:'2026-11-02',end:'2026-11-08'});
   click({category:'mach:B'});assert.ok(el('tab-content').innerHTML.includes('2행 · 원본 2건'));assert.ok(el('tab-content').innerHTML.includes('3.0h'));
   click({tab:'equipment'});assert.ok(el('tab-content').innerHTML.includes('MCT 호리젠탈'));
+  listeners.change({target:{id:'equipment-period',value:'03'}});assert.ok(el('kpis').innerHTML.includes('2026-03-01 ~ 2026-03-31'));
+  listeners.change({target:{id:'equipment-period',value:'year'}});assert.ok(el('kpis').innerHTML.includes('2026-01-01 ~ 2026-12-31'));
+  listeners.change({target:{id:'equipment-start',value:'2026-02-10'}});
+  listeners.change({target:{id:'equipment-end',value:'2026-03-20'}});
+  assert.ok(el('tab-content').innerHTML.includes('value="2026-02-10"'));
+  assert.ok(el('tab-content').innerHTML.includes('value="2026-03-20"'));
+  listeners.change({target:{id:'equipment-period',value:'year'}});
+  listeners.change({target:{id:'equipment-period',value:'11'}});
   click({equipment:'MCT 호리젠탈',process:'mach'});assert.ok(el('tab-content').innerHTML.includes('2행 · 원본 2건'));
   click({tab:'report'});assert.ok(el('tab-content').innerHTML.includes('규칙 기반 자동 분석'));click({},'print-report');assert.equal(printed,1);
   click({tab:'trend'});click({unit:'month'});assert.ok(el('kpis').innerHTML.includes('2026-01-01 ~ 2026-12-31'));
