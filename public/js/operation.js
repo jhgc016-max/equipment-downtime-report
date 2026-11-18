@@ -80,7 +80,8 @@
   function openHistory(process,equipment='',code=''){if(state.tab==='trend')chooseRange();state.tab='history';state.process=process;state.equipment=equipment;state.code=code;render();}
   document.addEventListener('click',e=>{
     const el=e.target.closest('button,[data-start]');if(!el||!data)return;
-    if(el.hasAttribute('data-manual-history')){window.ManualHistory.open(data);}
+    if(el.id==='download-monthly'){window.MonthlyExport.open(data);}
+    else if(el.hasAttribute('data-manual-history')){window.ManualHistory.open(data);}
     else if(el.dataset.historyProcess){state.process=el.dataset.historyProcess;state.equipment='';state.code='';render();}
     else if(el.dataset.trendProcess){state.trendProcess=el.dataset.trendProcess;render();}
     else if(el.dataset.tab){state.tab=el.dataset.tab;if(state.tab==='equipment'&&!data.imported&&!state.selection)state.range={start:state.month+'-01',end:C.monthEnd(state.month)};render();}
