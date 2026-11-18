@@ -49,7 +49,7 @@
   }
   function fromLegacy(res,D){
     const days=res.kinds.equip?.days||[];const equipment=[...new Set(days.map(d=>d.subject))].map(name=>({name,process:days.find(d=>d.subject===name).group}));
-    const daily=days.map(d=>({date:d.date,equipment:d.subject,process:d.group,plan:d.plan/60,down:d.down/60,run:d.run/60,day:null,night:null}));
+    const daily=days.map(d=>({date:d.date,equipment:d.subject,process:d.group,plan:d.plan/60,down:d.down/60,run:d.run/60,day:d.shift==='day'?d.run/60:null,night:d.shift==='day'?0:null,dayNightBasis:d.shift==='day'?'주간 근무 가동시간 (가동 기록이 없으면 계획−비가동 계산)':'주야간 배분 확인 필요'}));
     const history=(res.repairs?.list||[]).map((r,i)=>{const equip=r.equip.split(/[,;\n、]+/).map(s=>s.trim()).filter(Boolean);const process=equipment.find(e=>e.name===equip[0])?.process||D.autoGroup(equip[0]);const text=r.cause+' '+r.note;return {id:'import-'+i,start:r.startDate,end:r.endDate||r.startDate,process,equipment:equip,codes:Object.keys(codes[process]).filter(c=>text.includes(codes[process][c])),part:r.part,cause:r.cause,action:r.action,down:r.downHr,repair:r.repairHr};});
     return {version:1,imported:true,source:'등록한 엑셀 자료',equipment,daily,history,weeks:[]};
   }

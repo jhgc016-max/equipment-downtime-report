@@ -33,7 +33,7 @@ test('range transitions use six weeks, twelve months, Monday boundaries and abse
 });
 test('existing Excel parser adapter keeps full-precision minutes and does not invent day/night split',()=>{
   const S=D.normSettings({}),sample=D.sample();const result=D.analyze(D.merge(sample.sheets.map(s=>D.parseSheet(s.aoa,D.detectSheet(s.aoa,s.name).type,{sheet:s.name},S))),S);
-  const next=C.fromLegacy(result,D);assert.ok(next.daily.length>0);assert.ok(C.validate(next).some(e=>e.includes('가동 + 비가동')));assert.equal(next.daily[0].day,null);assert.equal(next.daily[0].plan,result.kinds.equip.days[0].plan/60);
+  const next=C.fromLegacy(result,D);assert.ok(next.daily.length>0);assert.ok(C.validate(next).some(e=>e.includes('가동 + 비가동')));assert.equal(next.daily[0].day,result.kinds.equip.days[0].shift==='day'?next.daily[0].run:null);assert.equal(next.daily[0].plan,result.kinds.equip.days[0].plan/60);
 });
 test('analysis UI renders all tabs, drills into equipment, categories and weekly history, and prints report',async()=>{
   const elements={},listeners={},storage=new Map();
