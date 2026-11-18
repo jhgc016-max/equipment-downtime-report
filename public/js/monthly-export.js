@@ -7,7 +7,7 @@
   const rows=new Map();const content=xml.match(/<sheetData[^>]*>([\s\S]*?)<\/sheetData>/)[1];
   for(const match of content.matchAll(/<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g)){
    const rn=Number(match[1].match(/\br="(\d+)"/)[1]),cells=new Map();
-   for(const c of (match[2]||'').matchAll(/<c\b[^>]*\br="([A-Z]+\d+)"[^>]*(?:\/>|>[\s\S]*?<\/c>)/g))cells.set(c[1],c[0]);
+   for(const c of (match[2]||'').matchAll(/<c\b[^>]*?\br="([A-Z]+\d+)"[^>]*?(?:\/>|>[\s\S]*?<\/c>)/g))cells.set(c[1],c[0]);
    rows.set(rn,{attributes:match[1],cells});
   }
   function put(r,c,value,styleRow=r){
