@@ -10,7 +10,7 @@ async function verify() {
  const loc={origin:'http://localhost:8787',href:''};
  const context={window:{Scan:require('../public/js/scanread.js'),Downtime:require('../public/js/downtime.js')},document:{getElementById:el},localStorage:{getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},location:loc,URL:class extends URL {static createObjectURL(f){return 'blob:'+f.name;}static revokeObjectURL(){}},AbortSignal,FileReader:class {readAsDataURL(f){readers.push(()=>this.onload({target:{result:'data:'+f.type+';base64,'+Buffer.from('%PDF-test').toString('base64')}}));}}};
  context.window.CloudSync={async addScan(scan){sent++;return true;}};
- context.window.ScanChatGPT={init(){},ready(){return true;},async read(f){calls++;if(calls===1&&fail)throw new Error('synthetic failure');const p=context.window.Scan.blankPage('mach');p.sourcePage=1;p.equipment='synthetic';return {pages:[p]};}};
+ context.window.ScanChatGPT={init(){},ready(){return true;},async read(f){calls++;if(calls===1&&fail)throw new Error('synthetic failure');const p=context.window.Scan.blankPage('mach');p.sourcePage=1;p.equipment='synthetic';p.date='2026-11-17';p.downtime=[{no:1,code:'B',start:'10:00',end:'10:30',note:'test'}];return {pages:[p]};}};
  vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/scan.js'),'utf8'),context);
  assert.equal(store.has('build-2611-11.ai'),false);
  el('btn-sc-clear').listeners.click();

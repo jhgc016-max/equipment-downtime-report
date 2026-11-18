@@ -87,7 +87,7 @@
   }
   function renderPreview() {
     var rows = S.toFormRows(state.pages.map(function (e) { return e.page; }), codeMap()), sm = S.summary(state.pages.map(function (e) { return e.page; }));
-    $('sc-preview').innerHTML = '<p class="sub">입력 양식 ' + (rows.length - 1) + '줄(비가동 ' + sm.downtime + ' · 가동 ' + sm.work + ') · 비가동 합계 ' + sm.downMinutes + '분</p><div class="tablewrap small"><table><thead><tr>' + rows[0].map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    $('sc-preview').innerHTML = '<p class="sub">입력 양식 ' + (rows.length - 1) + '줄 · 비가동 이력만 포함 · 비가동 합계 ' + sm.downMinutes + '분</p><div class="tablewrap small"><table><thead><tr>' + rows[0].map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       rows.slice(1, 40).map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>' + (rows.length > 41 ? '<p class="sub">… 외 ' + (rows.length - 41) + '줄</p>' : '');
   }
   function pageAt(el) { var box = el.closest('.page'); return box ? state.pages[+box.dataset.p] : null; }

@@ -181,11 +181,6 @@
         if(name&&note.indexOf(name)===0)note=note.slice(name.length).replace(/^\s*[—:·-]?\s*/,'');
         rows.push([p.equipment, group, p.worker, p.date, shift, '비가동', c, d.start, d.end, dur(d.start, d.end), note]); any = true;
       });
-      p.work.forEach(function (w) {
-        if (!w.start && !w.end) return;
-        rows.push([p.equipment, group, p.worker, p.date, shift, '가동', '', w.start, w.end, dur(w.start, w.end), [w.model, w.part, w.job, w.qty ? '수량 ' + w.qty : '', w.note].filter(Boolean).join(' · ')]); any = true;
-      });
-      if (!any) rows.push([p.equipment, group, p.worker, p.date, shift, '', '', '', '', '', '(읽은 줄 없음)']);
     });
     return rows;
   }
