@@ -53,7 +53,7 @@
   function historyTable(rows){return table(['구분','발생일','종료일','설비','비가동 범례','고장부위','현상·원인','조치내용','설비별 비가동','수리'],rows.map(r=>[C.names[r.process],r.start,r.end,esc(r.equipmentName),r.codes.map(c=>'<span class="badge '+r.process+'">'+esc(c+' '+(C.codes[r.process][c]||'분류 확인 필요'))+'</span>').join(' ')||'분류 확인 필요',esc(r.part),esc(r.cause),esc(r.action),'<span title="원본 '+hours(r.down)+' ÷ '+r.equipment.length+'대 (균등 배분)">'+fmt(r.allocated,2)+'h</span>',hours(r.repairAllocated)]),'history');}
   function historyView(){
     const h=filteredHistory(),equips=data.equipment.filter(e=>state.process==='all'||e.process===state.process);
-    h.rows.sort((a,b)=>b.start.localeCompare(a.start)||a.equipmentName.localeCompare(b.equipmentName,'ko'));
+    h.rows.sort((a,b)=>a.start.localeCompare(b.start)||a.equipmentName.localeCompare(b.equipmentName,'ko'));
     const key=[state.range.start,state.range.end,state.process,state.code,state.equipment].join('|');if(state.historyKey!==key){state.historyPage=1;state.historyKey=key;}
     const pages=Math.max(1,Math.ceil(h.rows.length/20));state.historyPage=Math.max(1,Math.min(pages,state.historyPage||1));const offset=(state.historyPage-1)*20;
     let out='<div class="panel-head"><h3>비가동·수리 이력</h3><div class="controls"><span class="muted">'+period()+'</span></div></div>';
