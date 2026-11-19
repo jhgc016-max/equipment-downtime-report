@@ -41,7 +41,7 @@ test('analysis UI renders all tabs, drills into equipment, categories and weekly
   function el(id){return elements[id]||=( {id,innerHTML:'',textContent:'',dataset:{},value:'',setAttribute(){},classList:{toggle(){return true;}},showModal(){this.open=true;},close(){this.open=false;},focus(){}});}
   const tabs=['trend','equipment','history','report'].map(tab=>{const t=el('tab-'+tab);t.dataset.tab=tab;return t;});let printed=0;
   const document={getElementById:el,querySelectorAll:q=>q==='[data-tab]'?tabs:[],querySelector:()=>null,addEventListener:(event,fn)=>listeners[event]=fn};
-  const context={document,window:{OperationCore:C,Downtime:D,history:browserHistory,addEventListener(type,fn){windowEvents[type]=fn;},print(){printed++;}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},fetch:async()=>({ok:true,json:async()=>structuredClone(data)}),MouseEvent:class{},console};
+  const context={document,window:{OperationCore:C,Downtime:D,WeeklyReport:require('../public/js/weekly-report.js'),history:browserHistory,addEventListener(type,fn){windowEvents[type]=fn;},print(){printed++;}},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},fetch:async()=>({ok:true,json:async()=>structuredClone(data)}),MouseEvent:class{},console};
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/js/operation.js'),'utf8'),context);await new Promise(setImmediate);
   const click=(dataset,id='')=>listeners.click({target:{closest:()=>({dataset,id,hasAttribute:k=>Object.hasOwn(dataset,k.replace(/^data-/, '').replace(/-([a-z])/g,(_,c)=>c.toUpperCase()))})}});
   assert.ok(el('tab-content').innerHTML.includes('전체 종합'));
