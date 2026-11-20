@@ -3,7 +3,7 @@
   const C=window.OperationCore,D=window.Downtime,$=id=>document.getElementById(id),esc=D.esc;
   const KEY='downtime.operation.v1';let data,reference,staged=null,stagedWorkspace=null;
   const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  const state={tab:'trend',month:today.slice(0,7),unit:'week',trendProcess:'all',range:{start:'2026-11-01',end:'2026-11-30'},selection:null,historyUnit:'month',historyPage:1,historyKey:'',process:'all',equipment:'',code:'',reportDate:'2026-11-02',appendix:false};
+  const state={tab:'trend',month:today.slice(0,7),unit:'week',trendProcess:'all',range:{start:'2026-11-01',end:'2026-11-30'},selection:null,historyUnit:'month',historyPage:1,historyKey:'',process:'all',equipment:'',code:'',reportProcess:'all',reportDate:'2026-11-02',appendix:false};
   const fmt=(v,d=1)=>v==null?'—':v.toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d});
   const hours=v=>fmt(v)+'h',pct=v=>fmt(v)+'%',period=()=>state.range.start+' ~ '+state.range.end;
   const empty=t=>'<div class="empty">'+esc(t||'등록 데이터 없음')+'</div>';
@@ -24,16 +24,16 @@
     let line=[];
     buckets.forEach((b,i)=>{
       const x=left+span*(i+.5),displayDate=annual&&unit==='week'?C.addDays(b.start,3):b.start,label=b.end!==b.start&&unit==='week'?Number(displayDate.slice(5,7))+'월 '+['첫째주','둘째주','셋째주','넷째주','다섯째주'][Math.ceil(Number(displayDate.slice(8))/7)-1]:unit==='month'&&b.end!==b.start?Number(b.start.slice(5,7))+'월':b.start.slice(5).replace('-','/');
-      if(!b.hasData){if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#3277df" stroke-width="3"/>';line=[];svg+='<text x="'+x+'" y="160" text-anchor="middle">—</text>';}
+      if(!b.hasData){if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#dc2626" stroke-width="3"/>';line=[];svg+='<text x="'+x+'" y="160" text-anchor="middle">—</text>';}
       else{
         const y=210-Math.max(0,Math.min(100,b.rate||0))*1.5;line.push(x+','+y);
-        svg+='<circle cx="'+x+'" cy="'+y+'" r="4" fill="white" stroke="#3277df" stroke-width="3"/><text class="rate-label" x="'+x+'" y="'+(y-12)+'" text-anchor="middle">'+pct(b.rate)+'</text>';
+        svg+='<circle cx="'+x+'" cy="'+y+'" r="4" fill="white" stroke="#dc2626" stroke-width="3"/><text class="rate-label" x="'+x+'" y="'+(y-12)+'" text-anchor="middle">'+pct(b.rate)+'</text>';
         const ph=(b.plan||0)/maxPlan*110,dh=(b.down||0)/maxPlan*110;
-        svg+='<rect x="'+(x-15)+'" y="'+(380-ph)+'" width="24" height="'+ph+'" rx="2" fill="#dce7f1"/><rect x="'+(x-5)+'" y="'+(380-dh)+'" width="22" height="'+dh+'" rx="2" fill="#fb923c"/><text x="'+x+'" y="255" text-anchor="middle" style="font-size:10px">계획 '+hours(b.plan)+'</text><text class="down-label" x="'+x+'" y="365" text-anchor="middle">'+hours(b.down)+'</text>';
+        svg+='<rect x="'+(x-15)+'" y="'+(380-ph)+'" width="24" height="'+ph+'" rx="2" fill="#3b82f6"/><rect x="'+(x-5)+'" y="'+(380-dh)+'" width="22" height="'+dh+'" rx="2" fill="#dc2626"/><text x="'+x+'" y="255" text-anchor="middle" style="font-size:10px">계획 '+hours(b.plan)+'</text><text class="down-label" x="'+x+'" y="365" text-anchor="middle">'+hours(b.down)+'</text>';
       }
       svg+='<text x="'+x+'" y="420" text-anchor="middle">'+label+'</text>';
     });
-    if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#3277df" stroke-width="3"/>';
+    if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#dc2626" stroke-width="3"/>';
     svg+=buckets.map((b,i)=>b.hasData?'<g class="chart-hit" role="button" tabindex="0" data-chart-unit="'+unit+'" data-start="'+b.start+'" data-end="'+b.end+'" aria-label="'+b.start+' ~ '+b.end+' 추이와 수리이력 보기"><title>'+b.start+' ~ '+b.end+' · 가동률 '+pct(b.rate)+' · 계획 '+hours(b.plan)+' · 비가동 '+hours(b.down)+'</title><rect class="hit" x="'+(left+span*i)+'" y="10" width="'+span+'" height="425" fill="transparent"/></g>':'').join('');
     return '<div class="chart-wrap '+(monthly?'monthly-chart':annual?'annual-chart':'')+'" tabindex="0" role="region" aria-label="'+esc(title)+'"><h3>'+esc(title)+'</h3><div class="legend"><span><i></i>가동률</span><span><i class="plan"></i>계획시간(h)</span><span><i class="down"></i>비가동시간(h)</span></div><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="xMidYMid meet" style="'+(monthly?'width:100%;min-width:0;max-width:1320px;':'width:'+width+'px;min-width:'+width+'px;max-width:none;')+'height:440px;margin-inline:auto" role="group" aria-label="'+esc(title)+' 가동률과 시간 추이">'+svg+'</svg></div>';
   }
@@ -51,7 +51,7 @@
   function legendView(process='all'){return '<aside class="note" aria-label="공정별 비가동 범례 안내">'+Object.keys(C.names).filter(p=>process==='all'||p===process).map(p=>'<div style="margin:5px 0"><strong>'+C.names[p]+' 범례</strong><div class="controls" style="margin-top:7px">'+Object.entries(C.codes[p]).map(([code,label])=>'<span class="badge '+p+'">'+esc(code+' · '+label)+'</span>').join('')+'</div></div>').join('')+'</aside>';}
   function categoryView(a,b,process='all'){return legendView(process)+'<div class="panel-head"><h3>범례별 비가동 비중</h3><span class="muted">'+a+' ~ '+b+'</span></div><div class="'+(process==='all'?'two':'')+'">'+Object.keys(C.names).filter(p=>process==='all'||p===process).map(p=>{const cats=C.categories(data,a,b,p),total=cats.reduce((s,x)=>s+x.hours,0);return '<article class="mini-panel"><div class="row"><h3>'+C.names[p]+'</h3><b>'+hours(total)+'</b></div>'+(!cats.length?empty('분류할 이력 없음'):cats.map(c=>'<button class="category" data-category="'+p+':'+c.code+'"><div class="row"><span>'+esc(c.code+' · '+c.label)+'</span><span>'+hours(c.hours)+'　<b>'+pct(total?c.hours/total*100:0)+'</b></span></div><div class="category-bar"><span style="width:'+(total?c.hours/total*100:0)+'%"></span></div></button><details><summary>설비별 배분시간 ▾</summary>'+Object.entries(c.equipment).map(([e,h])=>'<div class="list-row"><span>'+esc(e)+'</span><b>'+hours(h)+'</b></div>').join('')+'</details>').join(''))+'</article>';}).join('')+'</div><p class="muted">'+(data.imported?'시간: 가동표 실적 · 범례: 동일 날짜·설비 이력 · 서로 다른 범례는 1/N 균등 배분(추정).':'제공된 자료는 일별 설비 원시 가동표가 없어 이력 배분시간 기준으로 표시합니다.')+' 연결 이력·범례가 없으면 분류 확인 필요입니다.</p>';}
   function reconciliation(){return '<details><summary>조회기간 가동표·이력 시간 대조 · 범례는 이력 기준</summary>'+table(['공정','가동표 비가동(h)','이력 원본(h)','차이(h)','이력 미연결·범례 누락(h)'],Object.keys(C.names).map(p=>{const t=C.aggregate(data,state.range.start,state.range.end,p),records=data.history.filter(r=>r.process===p&&C.overlaps(r,state.range.start,state.range.end)),h=records.reduce((s,r)=>s+(r.down||0),0);const missing=data.imported?C.categories(data,state.range.start,state.range.end,p).filter(c=>c.code==='?').reduce((s,c)=>s+c.hours,0):null;return [C.names[p],fmt(t.down,2),fmt(h,2),fmt(t.down==null?null:t.down-h,2),fmt(missing,2)];}))+'<p class="muted">현재 조회기간·공정 전체 기준입니다. 범례·설비 필터의 표시 합계와는 다릅니다. 기간과 겹치는 원본 전체시간을 사용하며 가동표 실적에 더하지 않습니다. —는 원시 자료 미제공입니다.</p></details>';}
-  function historyTable(rows){return table(['구분','발생일','종료일','설비','비가동 범례','고장부위','현상·원인','조치내용','설비별 비가동','수리'],rows.map(r=>[C.names[r.process],r.start,r.end,esc(r.equipmentName),r.codes.map(c=>'<span class="badge '+r.process+'">'+esc(c+' '+(C.codes[r.process][c]||'분류 확인 필요'))+'</span>').join(' ')||'분류 확인 필요',esc(r.part),esc(r.cause),esc(r.action),'<span title="원본 '+hours(r.down)+' ÷ '+r.equipment.length+'대 (균등 배분)">'+fmt(r.allocated,2)+'h</span>',fmt(r.repairAllocated,2)+'h']),'history');}
+  function historyTable(rows){let index=-1;return table(['구분','발생일','종료일','설비','비가동 범례','고장부위','현상·원인','조치내용','설비별 비가동','수리'],rows.map(r=>[C.names[r.process],r.start,r.end,esc(r.equipmentName),r.codes.map(c=>'<span class="badge '+r.process+'">'+esc(c+' '+(C.codes[r.process][c]||'분류 확인 필요'))+'</span>').join(' ')||'분류 확인 필요',esc(r.part),esc(r.cause),esc(r.action),'<span title="원본 '+hours(r.down)+' ÷ '+r.equipment.length+'대 (균등 배분)">'+fmt(r.allocated,2)+'h</span>',fmt(r.repairAllocated,2)+'h']),'history').replace(/<tr>/g,match=>{if(index<0){index++;return match;}const r=rows[index++];return '<tr tabindex="0" title="더블클릭 또는 Enter로 이력 수정" data-edit-history="'+data.history.findIndex(x=>x.id===r.id&&x.process===r.process&&x.start===r.start)+'">';});}
   function historyView(){
     const h=filteredHistory(),equips=data.equipment.filter(e=>state.process==='all'||e.process===state.process);
     h.rows.sort((a,b)=>a.start.localeCompare(b.start)||a.equipmentName.localeCompare(b.equipmentName,'ko'));
@@ -69,7 +69,7 @@
     if(h.rows.length)out+='<nav class="controls" aria-label="수리 이력 페이지" style="justify-content:center;margin:16px 0"><button data-history-page="'+(state.historyPage-1)+'" '+(state.historyPage===1?'disabled':'')+'>이전</button><label>페이지 <select id="history-page">'+Array.from({length:pages},(_,i)=>'<option value="'+(i+1)+'" '+(state.historyPage===i+1?'selected':'')+'>'+(i+1)+' / '+pages+'</option>').join('')+'</select></label><button data-history-page="'+(state.historyPage+1)+'" '+(state.historyPage===pages?'disabled':'')+'>다음</button><span class="muted">전체 '+h.rows.length+'행 중 '+(offset+1)+'–'+Math.min(offset+20,h.rows.length)+'행</span></nav>';
     return out;
   }
-  function reportView(){return window.WeeklyReport.render(data,state.reportDate,state.appendix);}
+  function reportView(){return window.WeeklyReport.render(data,state.reportDate,state.appendix,state.reportProcess);}
   let viewSnapshot=null,restoringView=false;
   const snapshotView=()=>JSON.parse(JSON.stringify({...state,historyKey:''}));
   const currentScroll=()=>({y:window.scrollY||0,charts:[...document.querySelectorAll('.chart-wrap')].map(el=>el.scrollLeft)});
@@ -95,6 +95,9 @@
   function resetFilters(){state.process='all';state.equipment='';state.code='';}
   function chooseRange(){state.range={start:state.month.slice(0,4)+'-01-01',end:state.month.slice(0,4)+'-12-31'};state.selection=null;}
   function openHistory(process,equipment='',code=''){if(state.tab==='trend')chooseRange();state.tab='history';state.process=process;state.equipment=equipment;state.code=code;render();}
+  function editHistoryRow(e){const row=e.target.closest('[data-edit-history]');if(row&&data){const record=data.history[Number(row.dataset.editHistory)];if(record)window.ManualHistory.open(data,record);}}
+  document.addEventListener('dblclick',editHistoryRow);
+  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-edit-history]'))editHistoryRow(e);});
   document.addEventListener('click',e=>{
     const el=e.target.closest('button,[data-start]');if(!el||!data)return;
     if(el.dataset.historyPage){state.historyPage=Number(el.dataset.historyPage);render();}
@@ -108,6 +111,7 @@
     else if(el.hasAttribute('data-equipment'))openHistory(el.dataset.process,el.dataset.equipment);
     else if(el.dataset.allProcess)openHistory(el.dataset.allProcess);
     else if(el.dataset.category){const [p,c]=el.dataset.category.split(':');if(c!=='?')openHistory(p,'',c);}
+    else if(el.dataset.reportProcess){state.reportProcess=el.dataset.reportProcess;render();}
     else if(el.dataset.reportStep){state.reportDate=C.addDays(state.reportDate,Number(el.dataset.reportStep));render();}
     else if(el.id==='print-report'){const d=document.querySelector('.appendix details');if(state.appendix&&d)d.open=true;window.print();}
   });

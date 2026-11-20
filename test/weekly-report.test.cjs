@@ -11,3 +11,10 @@ test('empty reporting week renders missing values and does not invent rates',()=
  const html=Report.render({imported:true,equipment:[],daily:[],history:[]},'2026-11-18',false);
  assert.ok(html.includes('비교 자료 확인 필요'));assert.ok(html.includes('0대 / 0일'));assert.ok(!/NaN|Infinity/.test(html));
 });
+test('process report isolates machine totals and explains recorded causes and actions',()=>{
+ const data={imported:true,equipment:[{name:'NC-ONE',process:'mach'},{name:'ROBOT-ONE',process:'weld'}],daily:[{date:'2026-11-16',equipment:'NC-ONE',process:'mach',plan:10,run:8,down:2},{date:'2026-11-16',equipment:'ROBOT-ONE',process:'weld',plan:10,run:5,down:5}],history:[{id:'nc',process:'mach',start:'2026-11-16',end:'2026-11-16',equipment:['NC-ONE'],codes:['B'],down:2,repair:2,cause:'Hydraulic failure',action:'Pump replaced'},{id:'robot',process:'weld',start:'2026-11-16',end:'2026-11-16',equipment:['ROBOT-ONE'],codes:['B'],down:5,repair:5,cause:'Robot fault',action:'Reset'}]};
+ const nc=Report.render(data,'2026-11-18',true,'mach'),robot=Report.render(data,'2026-11-18',true,'weld');
+ assert.ok(nc.includes('80.0%'));assert.ok(nc.includes('Hydraulic failure'));assert.ok(nc.includes('Pump replaced'));assert.ok(!nc.includes('ROBOT-ONE'));assert.ok(!nc.includes('Robot fault'));
+ assert.ok(robot.includes('50.0%'));assert.ok(robot.includes('Robot fault'));assert.ok(!robot.includes('NC-ONE'));
+ assert.ok(nc.includes('data-report-process="all"'));assert.ok(nc.includes('#dc2626'));assert.ok(!/NaN|Infinity/.test(robot));
+});

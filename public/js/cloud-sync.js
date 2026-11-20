@@ -163,6 +163,20 @@
       if(!data?.ok)throw new Error('다른 PC에서 자료가 변경되었습니다. 삭제 대상을 다시 확인하세요.');
       window.OperationSync.apply(workspace);say('선택한 날짜 자료를 삭제했습니다.');
     },
+    async updateHistory(original,record){
+      if(!client)throw new Error('클라우드 연결 준비 후 다시 시도하세요.');
+      const cloud=await readShared();if(!cloud)throw new Error('클라우드 자료가 없습니다.');
+      const current=window.OperationSync.decode(cloud.payload);
+      const index=current.history.findIndex(r=>r.id===original.id&&r.process===original.process&&r.start===original.start);
+      if(index<0||JSON.stringify(current.history[index])!==JSON.stringify(original))throw new Error('이력이 변경되었습니다. 클라우드 자료를 새로 불러온 뒤 수정하세요.');
+      current.history[index]=record;
+      for(const name of record.equipment)if(!current.equipment.some(e=>e.name===name&&e.process===record.process))current.equipment.push({name,process:record.process});
+      const errors=window.OperationCore.validate(current);if(errors.length)throw new Error(errors.join('\n'));
+      const workspace=window.DowntimeSync.snapshot({version:1,settings:cloud.payload.settings,files:[{id:'operation-analysis',name:'가동 비가동 누적 자료',sheets:[{name:'분석자료',type:'operation-v1',aoa:[[JSON.stringify(current)]]}]}]});
+      const {data,error}=await client.rpc('save_shared_downtime_workspace',{expected_revision:cloud.revision,workspace});
+      if(error||!data?.ok)throw new Error('다른 PC의 변경 또는 연결 오류로 저장하지 못했습니다. 다시 불러온 뒤 수정하세요.');
+      window.OperationSync.apply(workspace);return current;
+    },
     async saveAnalysis(incoming) {
       if(!client)throw new Error('클라우드 연결이 준비되지 않았습니다. 잠시 후 다시 등록하세요.');
       for(let attempt=0;attempt<3;attempt++){
