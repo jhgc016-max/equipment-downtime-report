@@ -24,16 +24,16 @@
     let line=[];
     buckets.forEach((b,i)=>{
       const x=left+span*(i+.5),displayDate=annual&&unit==='week'?C.addDays(b.start,3):b.start,label=b.end!==b.start&&unit==='week'?Number(displayDate.slice(5,7))+'월 '+['첫째주','둘째주','셋째주','넷째주','다섯째주'][Math.ceil(Number(displayDate.slice(8))/7)-1]:unit==='month'&&b.end!==b.start?Number(b.start.slice(5,7))+'월':b.start.slice(5).replace('-','/');
-      if(!b.hasData){if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#dc2626" stroke-width="3"/>';line=[];svg+='<text x="'+x+'" y="160" text-anchor="middle">—</text>';}
+      if(!b.hasData){if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#f97316" stroke-width="3"/>';line=[];svg+='<text x="'+x+'" y="160" text-anchor="middle">—</text>';}
       else{
         const y=210-Math.max(0,Math.min(100,b.rate||0))*1.5;line.push(x+','+y);
-        svg+='<circle cx="'+x+'" cy="'+y+'" r="4" fill="white" stroke="#dc2626" stroke-width="3"/><text class="rate-label" x="'+x+'" y="'+(y-12)+'" text-anchor="middle">'+pct(b.rate)+'</text>';
+        svg+='<circle cx="'+x+'" cy="'+y+'" r="4" fill="white" stroke="#f97316" stroke-width="3"/><text class="rate-label" x="'+x+'" y="'+(y-12)+'" text-anchor="middle">'+pct(b.rate)+'</text>';
         const ph=(b.plan||0)/maxPlan*110,dh=(b.down||0)/maxPlan*110;
-        svg+='<rect x="'+(x-15)+'" y="'+(380-ph)+'" width="24" height="'+ph+'" rx="2" fill="#3b82f6"/><rect x="'+(x-5)+'" y="'+(380-dh)+'" width="22" height="'+dh+'" rx="2" fill="#dc2626"/><text x="'+x+'" y="255" text-anchor="middle" style="font-size:10px">계획 '+hours(b.plan)+'</text><text class="down-label" x="'+x+'" y="365" text-anchor="middle">'+hours(b.down)+'</text>';
+        svg+='<rect x="'+(x-30)+'" y="'+(380-ph)+'" width="24" height="'+ph+'" rx="2" fill="#3b82f6"/><rect x="'+(x+6)+'" y="'+(380-dh)+'" width="24" height="'+dh+'" rx="2" fill="#dc2626"/><text class="plan-label" x="'+(x-6)+'" y="'+(380-ph-12)+'" text-anchor="end">계획 '+hours(b.plan)+'</text><text class="down-label" x="'+(x+6)+'" y="'+(380-dh-12)+'" text-anchor="start">'+hours(b.down)+'</text>';
       }
       svg+='<text x="'+x+'" y="420" text-anchor="middle">'+label+'</text>';
     });
-    if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#dc2626" stroke-width="3"/>';
+    if(line.length>1)svg+='<polyline points="'+line.join(' ')+'" fill="none" stroke="#f97316" stroke-width="3"/>';
     svg+=buckets.map((b,i)=>b.hasData?'<g class="chart-hit" role="button" tabindex="0" data-chart-unit="'+unit+'" data-start="'+b.start+'" data-end="'+b.end+'" aria-label="'+b.start+' ~ '+b.end+' 추이와 수리이력 보기"><title>'+b.start+' ~ '+b.end+' · 가동률 '+pct(b.rate)+' · 계획 '+hours(b.plan)+' · 비가동 '+hours(b.down)+'</title><rect class="hit" x="'+(left+span*i)+'" y="10" width="'+span+'" height="425" fill="transparent"/></g>':'').join('');
     return '<div class="chart-wrap '+(monthly?'monthly-chart':annual?'annual-chart':'')+'" tabindex="0" role="region" aria-label="'+esc(title)+'"><h3>'+esc(title)+'</h3><div class="legend"><span><i></i>가동률</span><span><i class="plan"></i>계획시간(h)</span><span><i class="down"></i>비가동시간(h)</span></div><svg viewBox="0 0 '+width+' '+height+'" preserveAspectRatio="xMidYMid meet" style="'+(monthly?'width:100%;min-width:0;max-width:1320px;':'width:'+width+'px;min-width:'+width+'px;max-width:none;')+'height:440px;margin-inline:auto" role="group" aria-label="'+esc(title)+' 가동률과 시간 추이">'+svg+'</svg></div>';
   }
